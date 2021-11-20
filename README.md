@@ -1,4 +1,6 @@
 # BetterLootMarkers - Cyberpunk 2077 mod
+
+![Screenshot](screenshot.png "BetterLootMarkers Mod")
 This is a Cyberpunk 2077 mod that adds detailed loot markers on looting containers and dropped loot.
 
 If a container contains items of different types (armor, weapon, eddies), an icon for each category will show near the default loot marker, with different colored icons to represent the highest quality loot in each category.
