@@ -67,9 +67,6 @@ end
 
 function BetterLootMarkers.HandleMappinShown(owner, gameplayRoleComponent, originalMappin)
     if not BetterLootMarkers.mappedObjects[Utils.GetObjectId(owner)] then
-        if owner:IsNPC() and not owner:IsDead() then
-            return
-        end
         if not BetterLootMarkers.IsLootableRole(gameplayRoleComponent:GetCurrentGameplayRole()) then
             return
         end
