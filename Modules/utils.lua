@@ -19,7 +19,7 @@ function Utils.GetObjectId(object)
 end
 
 function Utils.VectorDistance(pos1, pos2)
-    return math.sqrt(((pos1.x - pos2.x) ^ 2) + ((pos1.y - pos2.y) ^ 2) + ((pos1.z - pos2.z) ^ 2))
+    return Vector4.Distance2D(pos1, pos2)
 end
 
 return Utils
