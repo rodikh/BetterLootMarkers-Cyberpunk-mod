@@ -22,4 +22,8 @@ function Utils.VectorDistance(pos1, pos2)
     return Vector4.Distance2D(pos1, pos2)
 end
 
+function Utils.Conditional(condition, left, right)
+    if condition then return left else return right end
+end
+
 return Utils
