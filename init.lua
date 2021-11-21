@@ -30,26 +30,18 @@ function BetterLootMarkers:new()
             if not BetterLootMarkers.IsLootMappin(data) then
                 return
             end
-
-            print("? AddMappin: " .. Utils.GetObjectId(self:GetOwner()))
-            local owner = self:GetOwner()
-            BetterLootMarkers.HandleMappinShown(owner, self)
+            BetterLootMarkers.HandleMappinShown(self:GetOwner(), self)
         end)
 
         Observe("GameplayRoleComponent", "ActivateSingleMappin", function(self, index)
             if not BetterLootMarkers.IsLootMappin(self.mappins[index + 1]) then
                 return
             end
-
-            print("? ActivateSingleMappin: " .. Utils.GetObjectId(self:GetOwner()))
-            local owner = self:GetOwner()
-            BetterLootMarkers.HandleMappinShown(owner, self)
+            BetterLootMarkers.HandleMappinShown(self:GetOwner(), self)
         end)
 
         Observe("GameplayRoleComponent", "HideRoleMappins", function(self)
-            local owner = self:GetOwner()
-            print("? HideRoleMappins: " .. Utils.GetObjectId(self:GetOwner()))
-            BetterLootMarkers.ClearMappinsForObject(owner)
+            BetterLootMarkers.ClearMappinsForObject(self:GetOwner())
         end)
 
         Observe("GameplayRoleComponent", "HideSingleMappin", function(self, index)
@@ -57,15 +49,11 @@ function BetterLootMarkers:new()
                 return
             end
 
-            local owner = self:GetOwner()
-            print("? HideSingleMappin: " .. Utils.GetObjectId(self:GetOwner()))
-            BetterLootMarkers.ClearMappinsForObject(owner)
+            BetterLootMarkers.ClearMappinsForObject(self:GetOwner())
         end)
 
         Observe("GameplayRoleComponent", "OnPreUninitialize", function(self)
-            local owner = self:GetOwner()
-            print("? OnPreUninitialize: " .. Utils.GetObjectId(self:GetOwner()))
-            BetterLootMarkers.ClearMappinsForObject(owner)
+            BetterLootMarkers.ClearMappinsForObject(self:GetOwner())
         end)
     end)
 
@@ -85,10 +73,8 @@ function BetterLootMarkers.HandleMappinShown(owner, gameplayRoleComponent)
         if Utils.VectorDistance(playerPos, ownerPos) > 50 then
             return
         end
-        print("--- Show mappins: " .. Utils.GetObjectId(owner) .. ":" .. owner:GetClassName().value)
         BetterLootMarkers.AddLootMappinsToObject(owner, gameplayRoleComponent)
     else
-        print("--- Update mappins: " .. Utils.GetObjectId(owner))
         BetterLootMarkers.UpdateMappinsForObject(owner, gameplayRoleComponent)
     end
 end
