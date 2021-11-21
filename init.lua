@@ -33,7 +33,6 @@ function BetterLootMarkers:new()
 
             -- before AddMappin is executed the mappin is not yet registered. delay HandleMappinShow to allow the mappin to be activated
             Cron.NextTick(function()
-                print("? AddMappin: " .. Utils.GetObjectId(self:GetOwner()) .. ":" .. self:GetOwner():GetClassName().value)
                 BetterLootMarkers.HandleMappinShown(self:GetOwner(), self)
             end)
         end)
