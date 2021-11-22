@@ -3,7 +3,7 @@
 ![Screenshot](screenshot.png "BetterLootMarkers Mod")
 This is a Cyberpunk 2077 mod that adds detailed loot markers on looting containers and dropped loot.
 
-If a container contains items of different types (armor, weapon, eddies), an icon for each category will show instead of default loot marker, with different colored icons to represent the highest quality loot in each category.
+If a container contains items of different types (armor, weapon, eddies), an icon for each category will show instead of the default loot marker, with different colored icons to represent the highest quality loot in each category.
 
 ## Installation
 This mod requires [Cyber Engine Tweaks](https://github.com/yamashi/CyberEngineTweaks) (also on [Nexus](https://www.nexusmods.com/cyberpunk2077/mods/107)) to be installed.
@@ -14,10 +14,10 @@ Tested to work on Cyberpunk version 1.31
 
 ## Issues and Contributions
 
-- Currently (Cyberpunk 1.31), Cyberpunk's default loot markers are buggy even without this mod, and the mod relies on the loot marker's default behaviour to show the new custom icons. BetterLootMarkers may not show up if the default marker is not handled properly by the game.
-- Known issue: ammo loot markers are missing
-
 Feel free to open an issue if you encounter a bug or suggest a pull request.
+
+- Currently (Cyberpunk 1.31), Cyberpunk's default loot markers are buggy even without this mod, and the mod relies on the loot marker's default behaviour to show the new custom icons. BetterLootMarkers may not show up if the default marker is not handled properly by the game.
+- Known issue: ammo loot markers are sometimes missing
 
 ## Planned Features
 

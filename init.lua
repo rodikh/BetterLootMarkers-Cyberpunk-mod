@@ -11,18 +11,6 @@ function BetterLootMarkers:new()
     BetterLootMarkers.Settings = require("Modules/Settings.lua")
     BetterLootMarkers.Settings.Init()
 
-    registerHotkey("DebugMappins", "Debug mappins", function()
-        print(" ")
-        print("---- Dumping mappins ----")
-        local playerPos = Game.GetPlayer():GetWorldPosition()
-        print("My position: " .. tostring(playerPos))
-        for objId, mappedObject in pairs(BetterLootMarkers.mappedObjects) do
-            print("- Object:" .. objId .. " - " .. mappedObject.targetName)
-            print("  Length - items:" .. mappedObject.itemCount .. " mappins:" .. table.getn(mappedObject.mappins) .. " - " .. Utils.VectorDistance(playerPos, mappedObject.targetPos))
-        end
-        print("---- --------------- ----")
-    end)
-
     registerForEvent("onInit", function()
         BetterLootMarkers.ItemTypes = require("Modules/Types.lua")
 
