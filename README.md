@@ -10,6 +10,8 @@ This mod requires [Cyber Engine Tweaks](https://github.com/yamashi/CyberEngineTw
 
 Extract the entire repository into `Cyberpunk 2077\bin\x64\plugins\cyber_engine_tweaks\mods\` and run the game.
 
+[Optional] Set "Hide default markers" to false in the Cyber Engine Tweaks overlay to show the original markers alongside the new markers
+
 Tested to work on Cyberpunk version 1.31
 
 ## Issues and Contributions

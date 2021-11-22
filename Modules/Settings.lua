@@ -16,7 +16,7 @@ function Settings.Init()
         ImGui.Begin("BetterLootMarkers", ImGuiWindowFlags.AlwaysAutoResize)
 
         local toggled = false
-        hideDefaultMappin, toggled = ImGui.Checkbox("Hide Default Mappin", Settings.hideDefaultMappin)
+        hideDefaultMappin, toggled = ImGui.Checkbox("Hide Default Markers", Settings.hideDefaultMappin)
         if toggled then
             Settings.hideDefaultMappin = hideDefaultMappin
             Settings.Save()
