@@ -14,17 +14,18 @@ function BetterLootMarkers:new()
     registerForEvent("onInit", function()
         BetterLootMarkers.ItemTypes = require("Modules/Types.lua")
 
-        Observe("GameplayRoleComponent", "AddMappin", function(self, data)
-            if not BetterLootMarkers.IsLootMappin(data) then
+        Observe("GameplayRoleComponent", "ShowSingleMappin;Int32", function(self, index)
+            if not BetterLootMarkers.IsLootMappin(self.mappins[index + 1]) then
                 return
             end
+            BetterLootMarkers.HandleMappinShown(self:GetOwner(), self)
+        end)
 
-            -- before AddMappin is executed the mappin is not yet registered. delay HandleMappinShow to allow the mappin to be activated
-            Cron.NextTick(function()
-                if self ~= nil then
-                    BetterLootMarkers.HandleMappinShown(self:GetOwner(), self)
-                end
-            end)
+        Observe("GameplayRoleComponent", "ShowSingleMappin;Int32GameplayRoleMappinData", function(self, index, _)
+            if not BetterLootMarkers.IsLootMappin(self.mappins[index + 1]) then
+                return
+            end
+            BetterLootMarkers.HandleMappinShown(self:GetOwner(), self)
         end)
 
         Observe("GameplayRoleComponent", "ActivateSingleMappin", function(self, index)
@@ -62,18 +63,21 @@ function BetterLootMarkers.HandleMappinShown(owner, gameplayRoleComponent)
         if not BetterLootMarkers.IsLootableRole(gameplayRoleComponent:GetCurrentGameplayRole()) then
             return
         end
+        if owner:IsNPC() and not owner:IsIncapacitated() then
+            return
+        end
         local playerPos = Game.GetPlayer():GetWorldPosition()
         local ownerPos = owner:GetWorldPosition()
         if Utils.VectorDistance(playerPos, ownerPos) > 50 then
             return
         end
-        BetterLootMarkers.AddLootMappinsToObject(owner, gameplayRoleComponent)
+        BetterLootMarkers.AddLootMappinsToObject(owner)
     else
-        BetterLootMarkers.UpdateMappinsForObject(owner, gameplayRoleComponent)
+        BetterLootMarkers.UpdateMappinsForObject(owner)
     end
 end
 
-function BetterLootMarkers.AddLootMappinsToObject(target, gameplayRoleComponent)
+function BetterLootMarkers.AddLootMappinsToObject(target)
     local itemList = BetterLootMarkers.GetItemListForObject(target)
     local itemCount = table.getn(itemList)
     if itemCount == 0 then
@@ -81,8 +85,7 @@ function BetterLootMarkers.AddLootMappinsToObject(target, gameplayRoleComponent)
     end
 
     local categories = BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
-    local originalMappinId = BetterLootMarkers.FindLootMappinId(gameplayRoleComponent)
-    local isHidableMappin = BetterLootMarkers.HandleHideDefaultMappin(target, originalMappinId)
+    BetterLootMarkers.HandleHideDefaultMappin(target)
 
     local offsetIndex = 1;
     local mappins = {};
@@ -93,16 +96,13 @@ function BetterLootMarkers.AddLootMappinsToObject(target, gameplayRoleComponent)
     end
 
     BetterLootMarkers.AddMappedObject({
-        objectId = Utils.GetObjectId(target),
+        target = target,
         mappins = mappins,
-        itemCount = itemCount,
-        targetName = target:GetClassName().value,
-        targetPos = target:GetWorldPosition(),
-        targetOriginalMappinId = Utils.Conditional(isHidableMappin, originalMappinId, nil)
+        itemCount = itemCount
     })
 end
 
-function BetterLootMarkers.UpdateMappinsForObject(target, gameplayRoleComponent)
+function BetterLootMarkers.UpdateMappinsForObject(target)
     local mappedObject = BetterLootMarkers.FindMappedObjectByTarget(target)
     local mappins = mappedObject.mappins
     local itemList = BetterLootMarkers.GetItemListForObject(target)
@@ -112,8 +112,7 @@ function BetterLootMarkers.UpdateMappinsForObject(target, gameplayRoleComponent)
         return BetterLootMarkers.ClearMappinsForObject(target)
     end
 
-    local originalMappinId = BetterLootMarkers.FindLootMappinId(gameplayRoleComponent)
-    BetterLootMarkers.HandleHideDefaultMappin(target, originalMappinId)
+    BetterLootMarkers.HandleHideDefaultMappin(target)
 
     if itemCount == mappedObject.itemCount then
         return
@@ -122,7 +121,7 @@ function BetterLootMarkers.UpdateMappinsForObject(target, gameplayRoleComponent)
     for _, mappinId in ipairs(mappins) do
         Game.GetMappinSystem():UnregisterMappin(mappinId)
     end
-    BetterLootMarkers.AddLootMappinsToObject(target, gameplayRoleComponent)
+    BetterLootMarkers.AddLootMappinsToObject(target)
 end
 
 function BetterLootMarkers.AddMappin(categoryKey, category, target, offsetIndex)
@@ -161,17 +160,16 @@ function BetterLootMarkers.ClearMappinsForObject(object)
     BetterLootMarkers.RemoveMappedObjectByTarget(object)
 end
 
-function BetterLootMarkers.HandleHideDefaultMappin(target, originalMappinId)
-    local isHidableMappin = false
-    if originalMappinId and not target:IsQuest() then
-        isHidableMappin = true
+function BetterLootMarkers.HandleHideDefaultMappin(target)
+    if not target:IsQuest() then
         if BetterLootMarkers.Settings.hideDefaultMappin then
             Cron.NextTick(function()
+                local gameplayRoleComponent = target:FindComponentByName("GameplayRole")
+                local originalMappinId = BetterLootMarkers.FindLootMappinId(gameplayRoleComponent)
                 Game.GetMappinSystem():SetMappinActive(originalMappinId, false);
             end)
         end
     end
-    return isHidableMappin
 end
 
 function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
@@ -246,8 +244,10 @@ end
 
 function BetterLootMarkers.HandleToggleHideDefaultMappin()
     for _, mappedObject in ipairs(BetterLootMarkers.mappedObjects) do
-        if mappedObject.targetOriginalMappinId then
-            Game.GetMappinSystem():SetMappinActive(mappedObject.targetOriginalMappinId, not BetterLootMarkers.Settings.hideDefaultMappin);
+        if not mappedObject.target:IsQuest() then
+            local gameplayRoleComponent = mappedObject.target:FindComponentByName("GameplayRole")
+            local originalMappinId = BetterLootMarkers.FindLootMappinId(gameplayRoleComponent)
+            Game.GetMappinSystem():SetMappinActive(originalMappinId, not BetterLootMarkers.Settings.hideDefaultMappin);
         end
     end
 end
@@ -259,7 +259,7 @@ end
 function BetterLootMarkers.RemoveMappedObjectByTarget(object)
     local objectId = Utils.GetObjectId(object)
     for i,v in ipairs(BetterLootMarkers.mappedObjects) do
-        if objectId == v.objectId then
+        if objectId == Utils.GetObjectId(v.target) then
             table.remove(BetterLootMarkers.mappedObjects, i)
             return
         end
@@ -269,7 +269,7 @@ end
 function BetterLootMarkers.FindMappedObjectByTarget(object)
     local objectId = Utils.GetObjectId(object)
     for _,v in ipairs(BetterLootMarkers.mappedObjects) do
-        if objectId == v.objectId then
+        if objectId == Utils.GetObjectId(v.target) then
             return v
         end
     end
