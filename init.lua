@@ -1,4 +1,5 @@
 local Utils = require("Modules/Utils.lua")
+local Ref = require("Modules/Ref.lua")
 local Cron = require("Modules/Cron.lua")
 
 BetterLootMarkers = {
@@ -96,7 +97,7 @@ function BetterLootMarkers.AddLootMappinsToObject(target)
     end
 
     BetterLootMarkers.AddMappedObject({
-        target = target,
+        target = Ref.Weak(target),
         mappins = mappins,
         itemCount = itemCount
     })
@@ -211,7 +212,7 @@ function BetterLootMarkers.GetLootCategoryForItem(item)
 end
 
 function BetterLootMarkers.GetItemListForObject(object)
-    local _, itemList = GetSingleton("gameTransactionSystem"):GetItemList(object)
+    local _, itemList = Game.GetTransactionSystem():GetItemList(object)
     local itemCount = table.getn(itemList)
     local owner = object:GetOwner()
     if itemCount == 0 and not owner then
@@ -219,7 +220,7 @@ function BetterLootMarkers.GetItemListForObject(object)
     end
     if itemCount == 0 and owner:IsA(CName.new("gameItemDropObject")) then
         object = object:GetOwner()
-        _, itemList = GetSingleton("gameTransactionSystem"):GetItemList(object)
+        _, itemList = Game.GetTransactionSystem():GetItemList(object)
     end
 
     return itemList
