@@ -15,6 +15,12 @@ function BetterLootMarkers:new()
     registerForEvent("onInit", function()
         BetterLootMarkers.ItemTypes = require("Modules/Types.lua")
 
+        Override("ScriptedPuppet", "HasLootableItems;ScriptedPuppet", function(self)
+            -- This fixes a bug where bodies with only ammo loot will not show markers in the vanilla game. HasLootableItems is coded to ignore ammo.
+            local _, itemList = Game.GetTransactionSystem():GetItemList(self)
+            return table.getn(itemList) > 0
+        end)
+
         Observe("GameplayRoleComponent", "ShowSingleMappin;Int32", function(self, index)
             if not BetterLootMarkers.IsLootMappin(self.mappins[index + 1]) then
                 return
@@ -185,11 +191,12 @@ function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
         if not Utils.HasKey(categories, category) then
             categories[category] = newItem
         else
-            qualityForCompare = quality
+            local qualityForCompare = quality
             if newItem.isIconic then
                 qualityForCompare = BetterLootMarkers.ItemTypes.Qualities.Iconic
             end
-            if BetterLootMarkers.ItemTypes.Qualities[qualityForCompare.value] > BetterLootMarkers.ItemTypes.Qualities[categories[category].quality.value] then
+            if BetterLootMarkers.ItemTypes.Qualities[qualityForCompare.value] >
+                BetterLootMarkers.ItemTypes.Qualities[categories[category].quality.value] then
                 categories[category] = newItem
             end
         end
@@ -231,7 +238,8 @@ function BetterLootMarkers.IsLootableRole(role)
 end
 
 function BetterLootMarkers.IsLootMappin(mappin)
-    return mappin ~= nil and (mappin.mappinVariant == gamedataMappinVariant.LootVariant or mappin.gameplayRole == EGameplayRole.Loot)
+    return mappin ~= nil and
+               (mappin.mappinVariant == gamedataMappinVariant.LootVariant or mappin.gameplayRole == EGameplayRole.Loot)
 end
 
 function BetterLootMarkers.FindLootMappinId(gameplayRoleComponent)
@@ -259,7 +267,7 @@ end
 
 function BetterLootMarkers.RemoveMappedObjectByTarget(object)
     local objectId = Utils.GetObjectId(object)
-    for i,v in ipairs(BetterLootMarkers.mappedObjects) do
+    for i, v in ipairs(BetterLootMarkers.mappedObjects) do
         if objectId == Utils.GetObjectId(v.target) then
             table.remove(BetterLootMarkers.mappedObjects, i)
             return
@@ -269,13 +277,12 @@ end
 
 function BetterLootMarkers.FindMappedObjectByTarget(object)
     local objectId = Utils.GetObjectId(object)
-    for _,v in ipairs(BetterLootMarkers.mappedObjects) do
+    for _, v in ipairs(BetterLootMarkers.mappedObjects) do
         if objectId == Utils.GetObjectId(v.target) then
             return v
         end
     end
     return nil
 end
-
 
 return BetterLootMarkers:new()
