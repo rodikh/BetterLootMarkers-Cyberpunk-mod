@@ -99,12 +99,13 @@ Types = {
         Legendary = 4,
         Iconic = 5
     },
-    LootableGameplayRoles = {
-        EGameplayRole.UnAssigned,
-        EGameplayRole.None,
-        EGameplayRole.Loot,
-        EGameplayRole.GenericRole,
-        EGameplayRole.NPC
+    Colors = {
+        Iconic = { Red=2.000000, Green=1.238000, Blue=0.450000, Alpha=1.000000  },
+        Legendary = {Red=1.796000, Green=0.523000, Blue=0.232300, Alpha=1.000000},
+        Epic = { Red = 1.200000, Green = 0.752000, Blue = 2.000000, Alpha = 1.000000},
+        Rare = {Red = 0.572000, Green = 0.960000, Blue = 1.691000, Alpha = 1.000000},
+        Uncommon = { Red = 0.037400, Green = 1.327000, Blue = 0.751000, Alpha = 1.000000},
+        Common = {Red = 1.090000, Green=0.982000, Blue=0.982000, Alpha=1.000000}
     }
 }
 
