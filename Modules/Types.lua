@@ -11,7 +11,7 @@ Types = {
             gamedataItemType.Wea_Shotgun,
             gamedataItemType.Wea_ShotgunDual,
             gamedataItemType.Wea_SniperRifle,
-            gamedataItemType.Wea_SubmachineGun,
+            gamedataItemType.Wea_SubmachineGun
         },
         Melee_Blunt = {
             gamedataItemType.Wea_TwoHandedClub,
@@ -40,13 +40,18 @@ Types = {
             gamedataItemType.Cyb_Launcher,
             gamedataItemType.Cyb_MantisBlades,
             gamedataItemType.Cyb_NanoWires,
-            gamedataItemType.Cyb_StrongArms
+            gamedataItemType.Cyb_StrongArms,
+            gamedataItemType.Cyberware
         },
         Consumable = {
-            gamedataItemType.Con_Edible,
+            gamedataItemType.Con_Edible
+        },
+        Medical = {
             gamedataItemType.Con_Inhaler,
             gamedataItemType.Con_Injector,
-            gamedataItemType.Con_LongLasting,
+            gamedataItemType.Con_LongLasting
+        },
+        Skillbook = {
             gamedataItemType.Con_Skillbook
         },
         Crafting = {
@@ -57,38 +62,52 @@ Types = {
         },
         Attachments = {
             gamedataItemType.Prt_Capacitor,
+            gamedataItemType.Prt_BootsFabricEnhancer,
+            gamedataItemType.Prt_PantsFabricEnhancer,
+            gamedataItemType.Prt_OuterTorsoFabricEnhancer,
+            gamedataItemType.Prt_FaceFabricEnhancer,
+            gamedataItemType.Prt_HeadFabricEnhancer,
+            gamedataItemType.Prt_TorsoFabricEnhancer,
             gamedataItemType.Prt_FabricEnhancer,
             gamedataItemType.Prt_Fragment,
             gamedataItemType.Prt_Magazine,
             gamedataItemType.Prt_Mod,
+            gamedataItemType.Prt_RifleMuzzle,
+            gamedataItemType.Prt_HandgunMuzzle,
             gamedataItemType.Prt_Muzzle,
-            gamedataItemType.Prt_Program,
             gamedataItemType.Prt_Receiver,
             gamedataItemType.Prt_Scope,
             gamedataItemType.Prt_ScopeRail,
             gamedataItemType.Prt_Stock,
             gamedataItemType.Prt_TargetingSystem
         },
+        Hacking = {
+            gamedataItemType.Prt_Program,
+        },
         Ammo = {
             gamedataItemType.Con_Ammo
         },
         Junk = {
-            gamedataItemType.Gen_Junk
+            gamedataItemType.Gen_Junk,
+            gamedataItemType.Gen_Jewellery
         }
     },
     ItemIcons = {
-        Guns = "UIIcon.Filter_RangedWeapons",
+        Guns = "UIIcon.LootingShadow_Weapon",
         Melee_Blunt = "UIIcon.Filter_MeleeWeapons",
         Melee_Blade = "UIIcon.Filter_MeleeWeapons",
-        Clothes = "UIIcon.Filter_Clothes",
+        Clothes = "UIIcon.LootingShadow_OuterChest",
         Cyberware = "UIIcon.Filter_Cyberware",
-        Consumable = "UIIcon.Filter_Consumables",
+        Consumable = "UIIcon.LootingShadow_Consumable",
+        Medical = "UIIcon.Filter_Consumables",
+        Skillbook = "UIIcon.LootingShadow_Shard",
         Crafting = "UIIcon.LootingShadow_Mod",
         Grenade = "UIIcon.Filter_Grenades",
         Attachments = "UIIcon.Filter_Attachments",
+        Hacking = "UIIcon.LootingShadow_Program",
         Ammo = "UIIcon.LootingShadow_Magazine",
         Junk = "UIIcon.Filter_AllItems",
-        Money = "UIIcon.Filter_Junk",
+        Money = "UIIcon.LootingShadow_Cash",
         Default = "UIIcon.Filter_AllItems"
     },
     Qualities = {
