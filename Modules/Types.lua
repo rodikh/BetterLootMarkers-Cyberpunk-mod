@@ -24,7 +24,10 @@ Types = {
             gamedataItemType.Wea_Knife,
             gamedataItemType.Wea_LongBlade,
             gamedataItemType.Wea_Katana,
-            gamedataItemType.Wea_ShortBlade
+            gamedataItemType.Wea_ShortBlade,
+            gamedataItemType.Wea_Machete,
+            gamedataItemType.Wea_Chainsword,
+            gamedataItemType.Wea_Axe,
         },
         Clothes = {
             gamedataItemType.Clo_Face,
@@ -143,4 +146,5 @@ Leftover generic types
     Gen_Readable
     GrenadeDelivery
     Grenade_Core
+    VendorToken
 --]]

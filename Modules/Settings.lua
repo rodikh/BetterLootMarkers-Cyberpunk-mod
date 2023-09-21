@@ -1,5 +1,5 @@
 local Settings = {
-    hideDefaultMappin = true,
+    verticalMode = false,
     isOverlayOpen = false,
     config_file = "config.json"
 }
@@ -16,12 +16,11 @@ function Settings.Init()
         ImGui.Begin("BetterLootMarkers", ImGuiWindowFlags.AlwaysAutoResize)
 
         local toggled = false
-        hideDefaultMappin, toggled = ImGui.Checkbox("Hide Default Markers", Settings.hideDefaultMappin)
+        verticalMode, toggled = ImGui.Checkbox("Vertical Mode", Settings.verticalMode)
         if toggled then
-            Settings.hideDefaultMappin = hideDefaultMappin
+            Settings.verticalMode = verticalMode
             Settings.Save()
-            BetterLootMarkers.HandleToggleHideDefaultMappin()
-        end
+       end
         ImGui.End()
         ImGui.PopStyleVar(1)
     end)
@@ -36,7 +35,7 @@ function Settings.Init()
 end
 
 function Settings.Save()
-    local settings = { hideDefaultMappin = Settings.hideDefaultMappin }
+    local settings = { verticalMode = Settings.verticalMode }
     local file = io.open(Settings.config_file, "w")
     file:write(json.encode(settings))
     file:close()
@@ -50,7 +49,7 @@ function Settings.Load()
 
     local json = json.decode(file:read("*a"))
     file:close()
-    Settings.hideDefaultMappin = json["hideDefaultMappin"]
+    Settings.verticalMode = json["verticalMode"]
 end
 
 return Settings

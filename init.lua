@@ -53,10 +53,10 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
         Y = 0.5
     }))
 
-    local horizontalPanel = ctrl.iconWidget.widget.parentWidget.parentWidget
-    horizontalPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
+    local containerPanel = ctrl.iconWidget.widget.parentWidget.parentWidget
+    containerPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
 
-    local betterLootMarkersContainer = BetterLootMarkers.AddPanelToWidget(horizontalPanel, "BetterLootMarkersContainer")
+    local betterLootMarkersContainer = BetterLootMarkers.AddPanelToWidget(containerPanel, "BetterLootMarkersContainer")
 
     for categoryKey, category in pairs(categories) do
         local color = HDRColor.new(BetterLootMarkers.ItemTypes.Colors[category.quality.value])
@@ -66,24 +66,24 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
 end
 
 function BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, icon)
-    if BetterLootMarkers.Settings.hideDefaultMappin and not ctrl:IsQuest() then
+    if not ctrl:IsQuest() then
         icon:SetScale(Vector2.new({
             X = 0,
             Y = 0
-        }))
-    else
-        icon:SetScale(Vector2.new({
-            X = 1,
-            Y = 1
         }))
     end
 end
 
 function BetterLootMarkers.AddPanelToWidget(parent, name)
-    local betterLootMarkersContainer = inkHorizontalPanel.new()
+    local betterLootMarkersContainer
+    if BetterLootMarkers.Settings.verticalMode then
+        betterLootMarkersContainer = inkVerticalPanel.new()
+    else
+        betterLootMarkersContainer = inkHorizontalPanel.new()
+    end
+
     betterLootMarkersContainer:SetName(CName.new(name))
     betterLootMarkersContainer:SetFitToContent(true)
-    betterLootMarkersContainer:SetHAlign(inkEHorizontalAlign.Center)
     betterLootMarkersContainer:SetAnchor(inkEAnchor.Fill)
     betterLootMarkersContainer:SetAnchorPoint(Vector2.new({
         X = 0.5,
@@ -92,7 +92,7 @@ function BetterLootMarkers.AddPanelToWidget(parent, name)
     betterLootMarkersContainer:SetChildMargin(inkMargin.new({
         top = 0.0,
         right = 20.0,
-        bottom = 0.0,
+        bottom = 20.0,
         left = 0.0
     }))
     betterLootMarkersContainer:Reparent(parent)
