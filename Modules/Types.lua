@@ -11,7 +11,8 @@ Types = {
             gamedataItemType.Wea_Shotgun,
             gamedataItemType.Wea_ShotgunDual,
             gamedataItemType.Wea_SniperRifle,
-            gamedataItemType.Wea_SubmachineGun
+            gamedataItemType.Wea_SubmachineGun,
+            gamedataItemType.Wea_GrenadeLauncher
         },
         Melee_Blunt = {
             gamedataItemType.Wea_TwoHandedClub,
@@ -28,6 +29,11 @@ Types = {
             gamedataItemType.Wea_Machete,
             gamedataItemType.Wea_Chainsword,
             gamedataItemType.Wea_Axe,
+            gamedataItemType.Wea_Sword
+        },
+        Vehicle_Weapon = {
+            gamedataItemType.Wea_VehicleMissileLauncher,
+            gamedataItemType.Wea_VehiclePowerWeapon
         },
         Clothes = {
             gamedataItemType.Clo_Face,
@@ -40,6 +46,7 @@ Types = {
         },
         Cyberware = {
             gamedataItemType.Cyb_Ability,
+            gamedataItemType.Cyb_HealingAbility,
             gamedataItemType.Cyb_Launcher,
             gamedataItemType.Cyb_MantisBlades,
             gamedataItemType.Cyb_NanoWires,
@@ -64,25 +71,41 @@ Types = {
             gamedataItemType.Gad_Grenade
         },
         Attachments = {
-            gamedataItemType.Prt_Capacitor,
+            gamedataItemType.Prt_AR_SMG_LMGMod, 
+            gamedataItemType.Prt_BladeMod,
+            gamedataItemType.Prt_BluntMod,
             gamedataItemType.Prt_BootsFabricEnhancer,
-            gamedataItemType.Prt_PantsFabricEnhancer,
-            gamedataItemType.Prt_OuterTorsoFabricEnhancer,
-            gamedataItemType.Prt_FaceFabricEnhancer,
-            gamedataItemType.Prt_HeadFabricEnhancer,
-            gamedataItemType.Prt_TorsoFabricEnhancer,
+            gamedataItemType.Prt_Capacitor,
             gamedataItemType.Prt_FabricEnhancer,
+            gamedataItemType.Prt_FaceFabricEnhancer,
             gamedataItemType.Prt_Fragment,
-            gamedataItemType.Prt_Magazine,
-            gamedataItemType.Prt_Mod,
-            gamedataItemType.Prt_RifleMuzzle,
+            gamedataItemType.Prt_HandgunMod,
             gamedataItemType.Prt_HandgunMuzzle,
+            gamedataItemType.Prt_HeadFabricEnhancer,
+            gamedataItemType.Prt_LongScope,
+            gamedataItemType.Prt_Magazine,
+            gamedataItemType.Prt_MeleeMod,
+            gamedataItemType.Prt_Mod,
             gamedataItemType.Prt_Muzzle,
+            gamedataItemType.Prt_OuterTorsoFabricEnhancer,
+            gamedataItemType.Prt_PantsFabricEnhancer,
+            gamedataItemType.Prt_PowerMod,
+            gamedataItemType.Prt_PowerSniperScope,
+            gamedataItemType.Prt_Precision_Sniper_RifleMod,
+            gamedataItemType.Prt_RangedMod,
             gamedataItemType.Prt_Receiver,
+            gamedataItemType.Prt_RifleMuzzle,
             gamedataItemType.Prt_Scope,
             gamedataItemType.Prt_ScopeRail,
+            gamedataItemType.Prt_ShortScope,
+            gamedataItemType.Prt_ShotgunMod,
+            gamedataItemType.Prt_SmartMod,
             gamedataItemType.Prt_Stock,
-            gamedataItemType.Prt_TargetingSystem
+            gamedataItemType.Prt_TargetingSystem,
+            gamedataItemType.Prt_TechMod,
+            gamedataItemType.Prt_TechSniperScope,
+            gamedataItemType.Prt_ThrowableMod,
+            gamedataItemType.Prt_TorsoFabricEnhancer
         },
         Hacking = {
             gamedataItemType.Prt_Program,
@@ -93,6 +116,12 @@ Types = {
         Junk = {
             gamedataItemType.Gen_Junk,
             gamedataItemType.Gen_Jewellery
+        },
+        Readable = {
+            gamedataItemType.Gen_Readable
+        },
+        Money = {
+            gamedataItemType.Gen_MoneyShard
         }
     },
     ItemIcons = {
@@ -100,16 +129,18 @@ Types = {
         Melee_Blunt = "UIIcon.Filter_MeleeWeapons",
         Melee_Blade = "UIIcon.Filter_MeleeWeapons",
         Clothes = "UIIcon.LootingShadow_OuterChest",
-        Cyberware = "UIIcon.Filter_Cyberware",
+        Cyberware = "UIIcon.LootingShadow_Cyberware",
         Consumable = "UIIcon.LootingShadow_Consumable",
         Medical = "UIIcon.Filter_Consumables",
         Skillbook = "UIIcon.LootingShadow_Shard",
-        Crafting = "UIIcon.LootingShadow_Mod",
+        Crafting = "UIIcon.LootingShadow_Material",
+        CraftingSpec = "UIIcon.Crafting",
         Grenade = "UIIcon.Filter_Grenades",
-        Attachments = "UIIcon.Filter_Attachments",
+        Attachments = "UIIcon.LootingShadow_Scope",
         Hacking = "UIIcon.LootingShadow_Program",
         Ammo = "UIIcon.LootingShadow_Magazine",
         Junk = "UIIcon.Filter_AllItems",
+        Readable = "UIIcon.Filter_Codex_Database",
         Money = "UIIcon.LootingShadow_Cash",
         Default = "UIIcon.Filter_AllItems"
     },
@@ -141,10 +172,14 @@ Leftover generic types
     Fla_Shock
     Fla_Support
     Gen_DataBank
-    Gen_Keycard
     Gen_Misc
-    Gen_Readable
+    Gen_Keycard
     GrenadeDelivery
     Grenade_Core
     VendorToken
+
+
+    wat to do:
+        CyberwareStatsShard
+        CyberwareUpgradeShard
 --]]

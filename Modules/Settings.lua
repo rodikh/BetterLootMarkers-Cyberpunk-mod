@@ -1,5 +1,7 @@
 local Settings = {
+    showDefaultMappin = false,
     verticalMode = false,
+    markerScaling = 1.0,
     isOverlayOpen = false,
     config_file = "config.json"
 }
@@ -20,7 +22,21 @@ function Settings.Init()
         if toggled then
             Settings.verticalMode = verticalMode
             Settings.Save()
-       end
+        end
+
+        showDefaultMappin, toggled = ImGui.Checkbox("Show Default Markers", Settings.showDefaultMappin)
+        if toggled then
+            Settings.showDefaultMappin = showDefaultMappin
+            Settings.Save()
+        end
+
+        local used = false
+        markerScaling, used = ImGui.SliderFloat("Marker Scaling", Settings.markerScaling, 0.0, 1.0, "%.2f")
+        if used then
+            Settings.markerScaling = markerScaling
+            Settings.Save()
+        end
+
         ImGui.End()
         ImGui.PopStyleVar(1)
     end)
@@ -35,7 +51,7 @@ function Settings.Init()
 end
 
 function Settings.Save()
-    local settings = { verticalMode = Settings.verticalMode }
+    local settings = { verticalMode = Settings.verticalMode, showDefaultMappin = Settings.showDefaultMappin, markerScaling = Settings.markerScaling }
     local file = io.open(Settings.config_file, "w")
     file:write(json.encode(settings))
     file:close()
@@ -50,6 +66,8 @@ function Settings.Load()
     local json = json.decode(file:read("*a"))
     file:close()
     Settings.verticalMode = json["verticalMode"]
+    Settings.showDefaultMappin = json["showDefaultMappin"]
+    Settings.markerScaling = json["markerScaling"]
 end
 
 return Settings

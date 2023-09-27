@@ -6,13 +6,16 @@ This is a Cyberpunk 2077 mod that adds detailed loot markers on looting containe
 If a container contains items of different types (armor, weapon, eddies), an icon for each category will show instead of the default loot marker, with different colored icons to represent the highest quality loot in each category.
 
 ## Installation
-This mod requires [Cyber Engine Tweaks](https://github.com/yamashi/CyberEngineTweaks) Version 1.18.1+ (also on [Nexus](https://www.nexusmods.com/cyberpunk2077/mods/107)) to be installed.
+
+This mod requires [Cyber Engine Tweaks](https://github.com/yamashi/CyberEngineTweaks) Version 1.26.0+ (also on [Nexus](https://www.nexusmods.com/cyberpunk2077/mods/107)) to be installed.
 
 Extract the entire repository into `Cyberpunk 2077\bin\x64\plugins\cyber_engine_tweaks\mods\` and run the game.
 
 [Optional] Set "Vertical Mode" to true in the Cyber Engine Tweaks overlay to change the display mode of the markers to vertical
+[Optional] Set "Show Default Markers" to true in the Cyber Engine Tweaks overlay to change bring back the original markers alongside Better Loot Markers
+[Optional] Use "Marker Scaling" to change the size of the markers
 
-Tested to work on Cyberpunk version 1.63
+Tested to work on Cyberpunk version 2.0
 
 ## Issues and Contributions
 

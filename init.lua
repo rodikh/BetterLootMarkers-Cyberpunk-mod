@@ -13,20 +13,19 @@ function BetterLootMarkers:new()
         BetterLootMarkers.ItemTypes = require("Modules/Types.lua")
 
         ObserveAfter("GameplayMappinController", "UpdateVisibility", function(self)
-            local target = Game.FindEntityByID(self:GetMappin():GetEntityID())
             BetterLootMarkers.HandleLootMarkersForController(self)
         end)
 
         ObserveAfter("GameplayMappinController", "UpdateIcon", function(self)
-            local target = Game.FindEntityByID(self:GetMappin():GetEntityID())
             BetterLootMarkers.HandleLootMarkersForController(self)
         end)
 
-        Override("ScriptedPuppet", "HasLootableItems;ScriptedPuppet", function(self)
-            -- This fixes a bug where bodies with only ammo loot will not show markers in the vanilla game. HasLootableItems is coded to ignore ammo.
-            local _, itemList = Game.GetTransactionSystem():GetItemList(self)
-            return table.getn(itemList) > 0
-        end)
+        -- CDPR removed "HasLootableItems" from 2.0
+        -- Override("ScriptedPuppet", "HasLootableItems;ScriptedPuppet", function(self)
+        --     -- This fixes a bug where bodies with only ammo loot will not show markers in the vanilla game. HasLootableItems is coded to ignore ammo.
+        --     local _, itemList = Game.GetTransactionSystem():GetItemList(self)
+        --     return table.getn(itemList) > 0
+        -- end)
     end)
 end
 
@@ -36,6 +35,11 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
     end
 
     local target = Game.FindEntityByID(ctrl:GetMappin():GetEntityID())
+    if target == nil then
+        -- TODO: Why sometimes no target?
+        return
+    end
+
     local itemList = BetterLootMarkers.GetItemListForObject(target)
     local itemCount = table.getn(itemList)
     if itemCount == 0 then
@@ -57,20 +61,25 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
     containerPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
 
     local betterLootMarkersContainer = BetterLootMarkers.AddPanelToWidget(containerPanel, "BetterLootMarkersContainer")
-
-    for categoryKey, category in pairs(categories) do
-        local color = HDRColor.new(BetterLootMarkers.ItemTypes.Colors[category.quality.value])
+    for categoryKey, category in Utils.sortedCategoryPairs(categories) do
+        local colorIndex = category.isIconic and "Iconic" or category.quality.value
+        local color = HDRColor.new(BetterLootMarkers.ItemTypes.Colors[colorIndex])
         BetterLootMarkers.AddIconToWidget(betterLootMarkersContainer, "BetterLootMappin-" .. categoryKey,
-            BetterLootMarkers.ItemTypes.ItemIcons[categoryKey], color)
+            BetterLootMarkers.ItemTypes.ItemIcons[categoryKey], color, colorIndex)
     end
 end
 
 function BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, icon)
-    if not ctrl:IsQuest() then
+    if not BetterLootMarkers.Settings.showDefaultMappin and not ctrl:IsQuest() then
         icon:SetScale(Vector2.new({
             X = 0,
             Y = 0
         }))
+    else   
+        icon:SetScale(Vector2.new({
+            X = 1,
+            Y = 1
+        })) 
     end
 end
 
@@ -99,10 +108,13 @@ function BetterLootMarkers.AddPanelToWidget(parent, name)
     return betterLootMarkersContainer
 end
 
-function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color)
+function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color, value)
     local icon = inkImage.new()
     icon:SetName(CName.new(name))
-    InkImageUtils.RequestSetImage(icon:GetController(), icon, iconId)
+    iconRecord = TweakDBInterface.GetUIIconRecord(TDBID.Create(iconId))
+    icon:SetTexturePart(iconRecord:AtlasPartName())
+    icon:SetAtlasResource( iconRecord:AtlasResourcePath())
+
     icon:SetMargin(inkMargin.new({
         top = 0.0,
         right = 0.0,
@@ -112,12 +124,13 @@ function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color)
     icon:SetVisible(true)
     icon:SetFitToContent(true)
     icon:SetScale(Vector2.new({
-        X = 1,
-        Y = 1
+        X = BetterLootMarkers.Settings.markerScaling,
+        Y = BetterLootMarkers.Settings.markerScaling
     }))
     icon:SetTintColor(color)
     parent:AddChildWidget(icon)
 end
+
 
 function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
     local categories = {}
@@ -126,7 +139,7 @@ function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
         local category = BetterLootMarkers.GetLootCategoryForItem(item)
         local newItem = {
             quality = quality,
-            isIconic = RPGManager.IsItemIconic(item)
+            isIconic = RPGManager.IsItemIconic(item),
         }
         if not Utils.HasKey(categories, category) then
             categories[category] = newItem
@@ -149,6 +162,11 @@ function BetterLootMarkers.GetLootCategoryForItem(item)
     if item:GetNameAsString() == "money" then
         return "Money"
     end
+
+    if item:HasTag("Recipe") then
+        return "CraftingSpec"
+    end
+
     for type, list in pairs(BetterLootMarkers.ItemTypes.Categories) do
         if Utils.HasValue(list, item:GetItemType()) then
             return type

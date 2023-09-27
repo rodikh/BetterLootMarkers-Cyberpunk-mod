@@ -26,4 +26,23 @@ function Utils.Conditional(condition, left, right)
     if condition then return left else return right end
 end
 
+function Utils.sortedCategoryPairs(t)
+    local keys = {}
+    for k in pairs(t) do keys[#keys+1] = k end
+
+    table.sort(keys, function(a,b) 
+        local aVal = t[a].isIconic and "Iconic" or t[a].quality.value
+        local bVal = t[b].isIconic and "Iconic" or t[b].quality.value
+        return BetterLootMarkers.ItemTypes.Qualities[bVal] < BetterLootMarkers.ItemTypes.Qualities[aVal] 
+    end )
+    
+    local i = 0
+    return function()
+        i = i + 1
+        if keys[i] then
+            return keys[i], t[keys[i]]
+        end
+    end
+end
+
 return Utils
