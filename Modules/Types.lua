@@ -142,6 +142,7 @@ Types = {
         Junk = "UIIcon.Filter_AllItems",
         Readable = "UIIcon.Filter_Codex_Database",
         Money = "UIIcon.LootingShadow_Cash",
+        Broken = "UIIcon.LootingShadow_Material",
         Default = "UIIcon.Filter_AllItems"
     },
     Qualities = {

@@ -163,6 +163,10 @@ function BetterLootMarkers.GetLootCategoryForItem(item)
         return "Money"
     end
 
+    if RPGManager.IsItemBroken(item) then
+        return "Broken"
+    end
+
     if item:HasTag("Recipe") then
         return "CraftingSpec"
     end
