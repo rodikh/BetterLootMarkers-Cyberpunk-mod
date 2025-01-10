@@ -30,6 +30,11 @@ function BetterLootMarkers:new()
 end
 
 function BetterLootMarkers.HandleLootMarkersForController(ctrl)
+    if ctrl == nil or ctrl:GetMappin() == nil or ctrl:GetMappin():GetVariant() == nil then
+        -- compatibility fix with other mods
+        return
+    end 
+    
     if ctrl:GetMappin():GetVariant() ~= gamedataMappinVariant.LootVariant then
         return
     end

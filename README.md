@@ -7,7 +7,7 @@ If a container contains items of different types (armor, weapon, eddies), an ico
 
 ## Installation
 
-This mod requires [Cyber Engine Tweaks](https://github.com/yamashi/CyberEngineTweaks) Version 1.26.0+ (also on [Nexus](https://www.nexusmods.com/cyberpunk2077/mods/107)) to be installed.
+This mod requires [Cyber Engine Tweaks](https://github.com/yamashi/CyberEngineTweaks) Version 1.34.1+ (also on [Nexus](https://www.nexusmods.com/cyberpunk2077/mods/107)) to be installed.
 
 Extract the entire repository into `Cyberpunk 2077\bin\x64\plugins\cyber_engine_tweaks\mods\` and run the game.
 
@@ -15,7 +15,7 @@ Extract the entire repository into `Cyberpunk 2077\bin\x64\plugins\cyber_engine_
 [Optional] Set "Show Default Markers" to true in the Cyber Engine Tweaks overlay to change bring back the original markers alongside Better Loot Markers
 [Optional] Use "Marker Scaling" to change the size of the markers
 
-Tested to work on Cyberpunk version 2.0
+Tested to work on Cyberpunk version 2.2
 
 ## Issues and Contributions
 
