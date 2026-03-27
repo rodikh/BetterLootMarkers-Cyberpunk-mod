@@ -18,12 +18,14 @@ function Settings.Init()
         ImGui.Begin("BetterLootMarkers", ImGuiWindowFlags.AlwaysAutoResize)
 
         local toggled = false
+        local verticalMode
         verticalMode, toggled = ImGui.Checkbox("Vertical Mode", Settings.verticalMode)
         if toggled then
             Settings.verticalMode = verticalMode
             Settings.Save()
         end
 
+        local showDefaultMappin
         showDefaultMappin, toggled = ImGui.Checkbox("Show Default Markers", Settings.showDefaultMappin)
         if toggled then
             Settings.showDefaultMappin = showDefaultMappin
@@ -31,6 +33,7 @@ function Settings.Init()
         end
 
         local used = false
+        local markerScaling
         markerScaling, used = ImGui.SliderFloat("Marker Scaling", Settings.markerScaling, 0.0, 1.0, "%.2f")
         if used then
             Settings.markerScaling = markerScaling
@@ -53,6 +56,9 @@ end
 function Settings.Save()
     local settings = { verticalMode = Settings.verticalMode, showDefaultMappin = Settings.showDefaultMappin, markerScaling = Settings.markerScaling }
     local file = io.open(Settings.config_file, "w")
+    if file == nil then
+        return
+    end
     file:write(json.encode(settings))
     file:close()
 end
@@ -63,11 +69,23 @@ function Settings.Load()
         return
     end
 
-    local json = json.decode(file:read("*a"))
+    local contents = file:read("*a")
     file:close()
-    Settings.verticalMode = json["verticalMode"]
-    Settings.showDefaultMappin = json["showDefaultMappin"]
-    Settings.markerScaling = json["markerScaling"]
+
+    local ok, decoded = pcall(json.decode, contents)
+    if not ok or type(decoded) ~= "table" then
+        return
+    end
+
+    if type(decoded["verticalMode"]) == "boolean" then
+        Settings.verticalMode = decoded["verticalMode"]
+    end
+    if type(decoded["showDefaultMappin"]) == "boolean" then
+        Settings.showDefaultMappin = decoded["showDefaultMappin"]
+    end
+    if type(decoded["markerScaling"]) == "number" then
+        Settings.markerScaling = math.max(0.0, math.min(1.0, decoded["markerScaling"]))
+    end
 end
 
 return Settings

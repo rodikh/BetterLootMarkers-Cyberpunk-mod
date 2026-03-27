@@ -1,4 +1,4 @@
-Types = {
+local Types = {
     Categories = {
         Guns = {
             gamedataItemType.Wea_AssaultRifle,
@@ -128,6 +128,7 @@ Types = {
         Guns = "UIIcon.LootingShadow_Weapon",
         Melee_Blunt = "UIIcon.Filter_MeleeWeapons",
         Melee_Blade = "UIIcon.Filter_MeleeWeapons",
+        Vehicle_Weapon = "UIIcon.Filter_HeavyWeapons",
         Clothes = "UIIcon.LootingShadow_OuterChest",
         Cyberware = "UIIcon.LootingShadow_Cyberware",
         Consumable = "UIIcon.LootingShadow_Consumable",
@@ -160,8 +161,15 @@ Types = {
         Rare = {Red = 0.572000, Green = 0.960000, Blue = 1.691000, Alpha = 1.000000},
         Uncommon = { Red = 0.037400, Green = 1.327000, Blue = 0.751000, Alpha = 1.000000},
         Common = {Red = 1.090000, Green=0.982000, Blue=0.982000, Alpha=1.000000}
-    }
+    },
+    TypeToCategory = {}
 }
+
+for category, itemTypes in pairs(Types.Categories) do
+    for _, itemType in ipairs(itemTypes) do
+        Types.TypeToCategory[itemType] = category
+    end
+end
 
 return Types
 

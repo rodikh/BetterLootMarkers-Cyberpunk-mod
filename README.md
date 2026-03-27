@@ -17,6 +17,22 @@ Extract the entire repository into `Cyberpunk 2077\bin\x64\plugins\cyber_engine_
 
 Tested to work on Cyberpunk version 2.2
 
+## Packaging for Nexus Mods
+
+Use the included executable batch script from the mod root:
+
+`pack-for-nexus.bat 1.2.0`
+
+This creates a Nexus-ready zip in `dist/` with the correct game folder structure:
+
+`bin/x64/plugins/cyber_engine_tweaks/mods/BetterLootMarkers/...`
+
+If no version is provided, it defaults to `dev`:
+
+`pack-for-nexus.bat`
+
+The default version comes from `version.txt` (also used by the mod at runtime and printed in CET log on startup).
+
 ## Issues and Contributions
 
 Feel free to open an issue if you encounter a bug or suggest a pull request.
