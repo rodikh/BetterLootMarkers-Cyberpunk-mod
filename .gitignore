@@ -1,0 +1,16 @@
+# Build and packaging outputs
+dist/
+_build/
+
+# Generated archives
+*.zip
+
+# Local/editor artifacts
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+
+# Optional local IDE settings
+.vscode/
+.idea/

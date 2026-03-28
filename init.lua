@@ -3,7 +3,6 @@ local Utils = require("Modules/Utils.lua")
 BetterLootMarkers = {
     Settings = {},
     ItemTypes = {},
-    _renderCache = {},
     Version = "dev"
 }
 
@@ -38,23 +37,20 @@ function BetterLootMarkers:new()
         ObserveAfter("GameplayMappinController", "UpdateIcon", function(self)
             BetterLootMarkers.HandleLootMarkersForController(self)
         end)
-
-        -- CDPR removed "HasLootableItems" from 2.0
-        -- Override("ScriptedPuppet", "HasLootableItems;ScriptedPuppet", function(self)
-        --     -- This fixes a bug where bodies with only ammo loot will not show markers in the vanilla game. HasLootableItems is coded to ignore ammo.
-        --     local _, itemList = Game.GetTransactionSystem():GetItemList(self)
-        --     return table.getn(itemList) > 0
-        -- end)
     end)
 end
 
 function BetterLootMarkers.HandleLootMarkersForController(ctrl)
-    if ctrl == nil or ctrl:GetMappin() == nil or ctrl:GetMappin():GetVariant() == nil then
-        -- compatibility fix with other mods
+    if ctrl == nil then
         return
     end
 
-    if ctrl:GetMappin():GetVariant() ~= gamedataMappinVariant.LootVariant then
+    local mappin = ctrl:GetMappin()
+    if mappin == nil or mappin:GetVariant() == nil then
+        return
+    end
+
+    if mappin:GetVariant() ~= gamedataMappinVariant.LootVariant then
         return
     end
 
@@ -69,25 +65,13 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
         return
     end
 
-    -- Full passthrough mode: restore vanilla marker and remove custom widgets.
-    if BetterLootMarkers.Settings.showDefaultMappin then
-        BetterLootMarkers.RestoreVanillaMarker(ctrl, iconWidget, containerPanel)
-        return
-    end
-
-    local target = Game.FindEntityByID(ctrl:GetMappin():GetEntityID())
+    local target = Game.FindEntityByID(mappin:GetEntityID())
     if target == nil then
-        -- TODO: Why sometimes no target?
         return
     end
 
     local itemList = BetterLootMarkers.GetItemListForObject(target)
-    local itemCount = table.getn(itemList)
-    if itemCount == 0 then
-        local cacheKey = BetterLootMarkers.GetControllerCacheKey(ctrl)
-        if cacheKey ~= nil then
-            BetterLootMarkers._renderCache[cacheKey] = nil
-        end
+    if #itemList == 0 then
         containerPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
         return
     end
@@ -102,12 +86,6 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
         Y = 0.5
     }))
 
-    local cacheKey = BetterLootMarkers.GetControllerCacheKey(ctrl)
-    local renderSignature = BetterLootMarkers.BuildRenderSignature(categories, ctrl:IsQuest())
-    if cacheKey ~= nil and BetterLootMarkers._renderCache[cacheKey] == renderSignature then
-        return
-    end
-
     containerPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
 
     local betterLootMarkersContainer = BetterLootMarkers.AddPanelToWidget(containerPanel, "BetterLootMarkersContainer")
@@ -117,10 +95,6 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
         BetterLootMarkers.AddIconToWidget(betterLootMarkersContainer, "BetterLootMappin-" .. categoryKey,
             BetterLootMarkers.ItemTypes.ItemIcons[categoryKey], color, colorIndex)
     end
-
-    if cacheKey ~= nil then
-        BetterLootMarkers._renderCache[cacheKey] = renderSignature
-    end
 end
 
 function BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, icon)
@@ -129,23 +103,12 @@ function BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, icon)
             X = 0,
             Y = 0
         }))
-    else   
+    else
         icon:SetScale(Vector2.new({
             X = 1,
             Y = 1
-        })) 
+        }))
     end
-end
-
-function BetterLootMarkers.RestoreVanillaMarker(ctrl, iconWidget, containerPanel)
-    BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, iconWidget)
-
-    local cacheKey = BetterLootMarkers.GetControllerCacheKey(ctrl)
-    if cacheKey ~= nil then
-        BetterLootMarkers._renderCache[cacheKey] = nil
-    end
-
-    containerPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
 end
 
 function BetterLootMarkers.AddPanelToWidget(parent, name)
@@ -203,31 +166,6 @@ function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color, value)
     parent:AddChildWidget(icon)
 end
 
-function BetterLootMarkers.GetControllerCacheKey(ctrl)
-    local mappin = ctrl:GetMappin()
-    if mappin == nil or mappin:GetEntityID() == nil then
-        return nil
-    end
-
-    return tostring(EntityID.GetHash(mappin:GetEntityID()))
-end
-
-function BetterLootMarkers.BuildRenderSignature(categories, isQuest)
-    local parts = {
-        BetterLootMarkers.Settings.verticalMode and "v1" or "v0",
-        BetterLootMarkers.Settings.showDefaultMappin and "d1" or "d0",
-        string.format("s%.2f", BetterLootMarkers.Settings.markerScaling or 1.0),
-        isQuest and "q1" or "q0"
-    }
-
-    for categoryKey, category in Utils.sortedCategoryPairs(categories) do
-        local colorIndex = category.isIconic and "Iconic" or category.quality.value
-        parts[#parts + 1] = categoryKey .. ":" .. colorIndex
-    end
-
-    return table.concat(parts, "|")
-end
-
 function BetterLootMarkers.GetItemScore(itemData)
     if itemData.isIconic then
         return BetterLootMarkers.ItemTypes.Qualities.Iconic
@@ -236,7 +174,6 @@ function BetterLootMarkers.GetItemScore(itemData)
     local qualityValue = itemData.quality and itemData.quality.value
     return BetterLootMarkers.ItemTypes.Qualities[qualityValue] or -1
 end
-
 
 function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
     local categories = {}
@@ -275,9 +212,16 @@ function BetterLootMarkers.GetLootCategoryForItem(item)
         return "CraftingSpec"
     end
 
-    local mappedCategory = BetterLootMarkers.ItemTypes.TypeToCategory[item:GetItemType()]
+    local itemType = item:GetItemType()
+    local mappedCategory = BetterLootMarkers.ItemTypes.TypeToCategoryByString[tostring(itemType)]
     if mappedCategory ~= nil then
         return mappedCategory
+    end
+
+    for cat, list in pairs(BetterLootMarkers.ItemTypes.Categories) do
+        if Utils.HasValue(list, itemType) then
+            return cat
+        end
     end
 
     return "Default"
@@ -291,15 +235,15 @@ function BetterLootMarkers.GetItemListForObject(object)
 
     local _, itemList = transactionSystem:GetItemList(object)
     itemList = itemList or {}
-    local itemCount = table.getn(itemList)
-    local owner = object:GetOwner()
-    if itemCount == 0 and not owner then
-        return {}
-    end
-    if itemCount == 0 and owner:IsA(CName.new("gameItemDropObject")) then
-        object = object:GetOwner()
-        _, itemList = transactionSystem:GetItemList(object)
-        itemList = itemList or {}
+    if #itemList == 0 then
+        local owner = object:GetOwner()
+        if not owner then
+            return {}
+        end
+        if owner:IsA(CName.new("gameItemDropObject")) then
+            _, itemList = transactionSystem:GetItemList(owner)
+            itemList = itemList or {}
+        end
     end
 
     return itemList

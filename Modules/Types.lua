@@ -162,12 +162,12 @@ local Types = {
         Uncommon = { Red = 0.037400, Green = 1.327000, Blue = 0.751000, Alpha = 1.000000},
         Common = {Red = 1.090000, Green=0.982000, Blue=0.982000, Alpha=1.000000}
     },
-    TypeToCategory = {}
+    TypeToCategoryByString = {}
 }
 
 for category, itemTypes in pairs(Types.Categories) do
     for _, itemType in ipairs(itemTypes) do
-        Types.TypeToCategory[itemType] = category
+        Types.TypeToCategoryByString[tostring(itemType)] = category
     end
 end
 
