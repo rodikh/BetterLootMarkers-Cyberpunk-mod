@@ -1,13 +1,14 @@
 local Utils = require("Modules/Utils.lua")
 
-local CONTAINER_CNAME
 local ITEM_DROP_CNAME
 
 BetterLootMarkers = {
     Settings = {},
     ItemTypes = {},
-    Version = "dev"
+    Version = "1.4.0",
 }
+
+require("Modules/LootMarkerUI.lua")
 
 function BetterLootMarkers.LoadVersion()
     local versionFile = io.open("version.txt", "r")
@@ -27,9 +28,11 @@ end
 function BetterLootMarkers:new()
     BetterLootMarkers.Settings = require("Modules/Settings.lua")
     BetterLootMarkers.Settings.Init()
+    BetterLootMarkers.ScannerFix = require("Modules/ScannerFix.lua")
+    BetterLootMarkers.ImmersiveMode = require("Modules/ImmersiveMode.lua")
 
     registerForEvent("onInit", function()
-        CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
+        BetterLootMarkers.CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
         ITEM_DROP_CNAME = CName.new("gameItemDropObject")
 
         BetterLootMarkers.Version = BetterLootMarkers.LoadVersion()
@@ -43,6 +46,13 @@ function BetterLootMarkers:new()
         ObserveAfter("GameplayMappinController", "UpdateIcon", function(self)
             BetterLootMarkers.HandleLootMarkersForController(self)
         end)
+
+        BetterLootMarkers.ScannerFix.Init(ITEM_DROP_CNAME)
+        BetterLootMarkers.ImmersiveMode.Init()
+    end)
+
+    registerForEvent("onUpdate", function(dt)
+        BetterLootMarkers.ImmersiveMode.Tick(dt)
     end)
 end
 
@@ -79,6 +89,14 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
         return
     end
 
+    BetterLootMarkers.ImmersiveMode.TrackController(ctrl)
+
+    if BetterLootMarkers.Settings.immersiveMode and not BetterLootMarkers.ImmersiveMode.IsScannerActive() then
+        iconWidget:SetScale(Vector2.new({ X = 1, Y = 1 }))
+        containerPanel:RemoveChildByName(BetterLootMarkers.CONTAINER_CNAME)
+        return
+    end
+
     local target = Game.FindEntityByID(mappin:GetEntityID())
     if target == nil then
         return
@@ -86,7 +104,7 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
 
     local itemList = BetterLootMarkers.GetItemListForObject(target)
     if #itemList == 0 then
-        containerPanel:RemoveChildByName(CONTAINER_CNAME)
+        containerPanel:RemoveChildByName(BetterLootMarkers.CONTAINER_CNAME)
         return
     end
 
@@ -100,14 +118,36 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
         Y = 0.5
     }))
 
-    containerPanel:RemoveChildByName(CONTAINER_CNAME)
+    containerPanel:RemoveChildByName(BetterLootMarkers.CONTAINER_CNAME)
 
     local container = BetterLootMarkers.AddPanelToWidget(containerPanel)
+    local showCounts = BetterLootMarkers.Settings.showItemCounts
+
     for categoryKey, category in Utils.sortedCategoryPairs(categories, BetterLootMarkers.ItemTypes.Qualities) do
         local colorIndex = category.isIconic and "Iconic" or category.quality.value
         local color = HDRColor.new(BetterLootMarkers.ItemTypes.Colors[colorIndex])
-        BetterLootMarkers.AddIconToWidget(container, "BetterLootMappin-" .. categoryKey,
-            BetterLootMarkers.ItemTypes.ItemIcons[categoryKey], color, colorIndex)
+        local iconKey = BetterLootMarkers.ItemTypes.ItemIcons[categoryKey]
+        local needsCountSlot = showCounts and category.count > 1
+        local iconParent = container
+
+        if needsCountSlot then
+            local slot = inkVerticalPanel.new()
+            slot:SetName(CName.new("BetterLootSlot-" .. categoryKey))
+            slot:SetFitToContent(true)
+            pcall(function()
+                slot:SetChildHorizontalAlignment(inkEHorizontalAlign.Center)
+            end)
+            slot:Reparent(container)
+            iconParent = slot
+        end
+
+        BetterLootMarkers.AddIconToWidget(iconParent, "BetterLootMappin-" .. categoryKey,
+            iconKey, color)
+
+        if needsCountSlot then
+            BetterLootMarkers.AddCountBadge(iconParent, "BetterLootCount-" .. categoryKey,
+                category.count, color)
+        end
     end
 end
 
@@ -123,61 +163,6 @@ function BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, icon)
             Y = 1
         }))
     end
-end
-
-function BetterLootMarkers.AddPanelToWidget(parent)
-    local container
-    if BetterLootMarkers.Settings.verticalMode then
-        container = inkVerticalPanel.new()
-    else
-        container = inkHorizontalPanel.new()
-    end
-
-    container:SetName(CONTAINER_CNAME)
-    container:SetFitToContent(true)
-    container:SetAnchor(inkEAnchor.Fill)
-    container:SetAnchorPoint(Vector2.new({
-        X = 0.5,
-        Y = 0.5
-    }))
-    container:SetChildMargin(inkMargin.new({
-        top = 0.0,
-        right = 20.0,
-        bottom = 20.0,
-        left = 0.0
-    }))
-    container:Reparent(parent)
-    return container
-end
-
-function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color, value)
-    local icon = inkImage.new()
-    icon:SetName(CName.new(name))
-    local resolvedIconId = iconId or BetterLootMarkers.ItemTypes.ItemIcons.Default
-    local iconRecord = TweakDBInterface.GetUIIconRecord(TDBID.Create(resolvedIconId))
-    if iconRecord == nil then
-        iconRecord = TweakDBInterface.GetUIIconRecord(TDBID.Create(BetterLootMarkers.ItemTypes.ItemIcons.Default))
-        if iconRecord == nil then
-            return
-        end
-    end
-    icon:SetTexturePart(iconRecord:AtlasPartName())
-    icon:SetAtlasResource(iconRecord:AtlasResourcePath())
-
-    icon:SetMargin(inkMargin.new({
-        top = 0.0,
-        right = 0.0,
-        bottom = 0.0,
-        left = 0.0
-    }))
-    icon:SetVisible(true)
-    icon:SetFitToContent(true)
-    icon:SetScale(Vector2.new({
-        X = BetterLootMarkers.Settings.markerScaling,
-        Y = BetterLootMarkers.Settings.markerScaling
-    }))
-    icon:SetTintColor(color)
-    parent:AddChildWidget(icon)
 end
 
 function BetterLootMarkers.GetItemScore(itemData)
@@ -200,11 +185,15 @@ function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
         }
         if categories[category] == nil then
             categories[category] = newItem
+            categories[category].count = 1
         else
+            categories[category].count = categories[category].count + 1
             local currentScore = BetterLootMarkers.GetItemScore(categories[category])
             local newScore = BetterLootMarkers.GetItemScore(newItem)
             if newScore > currentScore then
+                local count = categories[category].count
                 categories[category] = newItem
+                categories[category].count = count
             end
         end
     end

@@ -2,6 +2,8 @@ local Settings = {
     showDefaultMappin = false,
     verticalMode = false,
     markerScaling = 1.0,
+    showItemCounts = false,
+    immersiveMode = false,
     isOverlayOpen = false,
     config_file = "config.json",
     _dirty = false
@@ -19,6 +21,7 @@ function Settings.Init()
         ImGui.Begin("BetterLootMarkers", ImGuiWindowFlags.AlwaysAutoResize)
 
         local toggled = false
+
         local verticalMode
         verticalMode, toggled = ImGui.Checkbox("Vertical Mode", Settings.verticalMode)
         if toggled then
@@ -38,6 +41,22 @@ function Settings.Init()
         markerScaling, used = ImGui.SliderFloat("Marker Scaling", Settings.markerScaling, 0.0, 1.0, "%.2f")
         if used then
             Settings.markerScaling = markerScaling
+            Settings._dirty = true
+        end
+
+        ImGui.Separator()
+
+        local immersiveMode
+        immersiveMode, toggled = ImGui.Checkbox("Immersive Mode (Scanner Only)", Settings.immersiveMode)
+        if toggled then
+            Settings.immersiveMode = immersiveMode
+            Settings._dirty = true
+        end
+
+        local showItemCounts
+        showItemCounts, toggled = ImGui.Checkbox("Show Item Counts", Settings.showItemCounts)
+        if toggled then
+            Settings.showItemCounts = showItemCounts
             Settings._dirty = true
         end
 
@@ -62,7 +81,9 @@ function Settings.Save()
     local settings = {
         verticalMode = Settings.verticalMode,
         showDefaultMappin = Settings.showDefaultMappin,
-        markerScaling = Settings.markerScaling
+        markerScaling = Settings.markerScaling,
+        showItemCounts = Settings.showItemCounts,
+        immersiveMode = Settings.immersiveMode
     }
     local file = io.open(Settings.config_file, "w")
     if file == nil then
@@ -94,6 +115,12 @@ function Settings.Load()
     end
     if type(decoded["markerScaling"]) == "number" then
         Settings.markerScaling = math.max(0.0, math.min(1.0, decoded["markerScaling"]))
+    end
+    if type(decoded["showItemCounts"]) == "boolean" then
+        Settings.showItemCounts = decoded["showItemCounts"]
+    end
+    if type(decoded["immersiveMode"]) == "boolean" then
+        Settings.immersiveMode = decoded["immersiveMode"]
     end
 end
 
