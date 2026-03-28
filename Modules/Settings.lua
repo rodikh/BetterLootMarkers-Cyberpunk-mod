@@ -3,7 +3,8 @@ local Settings = {
     verticalMode = false,
     markerScaling = 1.0,
     isOverlayOpen = false,
-    config_file = "config.json"
+    config_file = "config.json",
+    _dirty = false
 }
 
 function Settings.Init()
@@ -22,14 +23,14 @@ function Settings.Init()
         verticalMode, toggled = ImGui.Checkbox("Vertical Mode", Settings.verticalMode)
         if toggled then
             Settings.verticalMode = verticalMode
-            Settings.Save()
+            Settings._dirty = true
         end
 
         local showDefaultMappin
         showDefaultMappin, toggled = ImGui.Checkbox("Show Default Markers", Settings.showDefaultMappin)
         if toggled then
             Settings.showDefaultMappin = showDefaultMappin
-            Settings.Save()
+            Settings._dirty = true
         end
 
         local used = false
@@ -37,7 +38,7 @@ function Settings.Init()
         markerScaling, used = ImGui.SliderFloat("Marker Scaling", Settings.markerScaling, 0.0, 1.0, "%.2f")
         if used then
             Settings.markerScaling = markerScaling
-            Settings.Save()
+            Settings._dirty = true
         end
 
         ImGui.End()
@@ -50,11 +51,19 @@ function Settings.Init()
 
     registerForEvent("onOverlayClose", function()
         Settings.isOverlayOpen = false
+        if Settings._dirty then
+            Settings.Save()
+            Settings._dirty = false
+        end
     end)
 end
 
 function Settings.Save()
-    local settings = { verticalMode = Settings.verticalMode, showDefaultMappin = Settings.showDefaultMappin, markerScaling = Settings.markerScaling }
+    local settings = {
+        verticalMode = Settings.verticalMode,
+        showDefaultMappin = Settings.showDefaultMappin,
+        markerScaling = Settings.markerScaling
+    }
     local file = io.open(Settings.config_file, "w")
     if file == nil then
         return

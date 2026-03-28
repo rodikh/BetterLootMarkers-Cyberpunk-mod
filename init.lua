@@ -1,5 +1,8 @@
 local Utils = require("Modules/Utils.lua")
 
+local CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
+local ITEM_DROP_CNAME = CName.new("gameItemDropObject")
+
 BetterLootMarkers = {
     Settings = {},
     ItemTypes = {},
@@ -41,16 +44,24 @@ function BetterLootMarkers:new()
 end
 
 function BetterLootMarkers.HandleLootMarkersForController(ctrl)
+    local ok, err = pcall(BetterLootMarkers._HandleLootMarkers, ctrl)
+    if not ok then
+        print("[BetterLootMarkers] Error: " .. tostring(err))
+    end
+end
+
+function BetterLootMarkers._HandleLootMarkers(ctrl)
     if ctrl == nil then
         return
     end
 
     local mappin = ctrl:GetMappin()
-    if mappin == nil or mappin:GetVariant() == nil then
+    if mappin == nil then
         return
     end
 
-    if mappin:GetVariant() ~= gamedataMappinVariant.LootVariant then
+    local variant = mappin:GetVariant()
+    if variant == nil or variant ~= gamedataMappinVariant.LootVariant then
         return
     end
 
@@ -72,7 +83,7 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
 
     local itemList = BetterLootMarkers.GetItemListForObject(target)
     if #itemList == 0 then
-        containerPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
+        containerPanel:RemoveChildByName(CONTAINER_CNAME)
         return
     end
 
@@ -86,13 +97,13 @@ function BetterLootMarkers.HandleLootMarkersForController(ctrl)
         Y = 0.5
     }))
 
-    containerPanel:RemoveChildByName(CName.new("BetterLootMarkersContainer"))
+    containerPanel:RemoveChildByName(CONTAINER_CNAME)
 
-    local betterLootMarkersContainer = BetterLootMarkers.AddPanelToWidget(containerPanel, "BetterLootMarkersContainer")
-    for categoryKey, category in Utils.sortedCategoryPairs(categories) do
+    local container = BetterLootMarkers.AddPanelToWidget(containerPanel)
+    for categoryKey, category in Utils.sortedCategoryPairs(categories, BetterLootMarkers.ItemTypes.Qualities) do
         local colorIndex = category.isIconic and "Iconic" or category.quality.value
         local color = HDRColor.new(BetterLootMarkers.ItemTypes.Colors[colorIndex])
-        BetterLootMarkers.AddIconToWidget(betterLootMarkersContainer, "BetterLootMappin-" .. categoryKey,
+        BetterLootMarkers.AddIconToWidget(container, "BetterLootMappin-" .. categoryKey,
             BetterLootMarkers.ItemTypes.ItemIcons[categoryKey], color, colorIndex)
     end
 end
@@ -111,29 +122,29 @@ function BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, icon)
     end
 end
 
-function BetterLootMarkers.AddPanelToWidget(parent, name)
-    local betterLootMarkersContainer
+function BetterLootMarkers.AddPanelToWidget(parent)
+    local container
     if BetterLootMarkers.Settings.verticalMode then
-        betterLootMarkersContainer = inkVerticalPanel.new()
+        container = inkVerticalPanel.new()
     else
-        betterLootMarkersContainer = inkHorizontalPanel.new()
+        container = inkHorizontalPanel.new()
     end
 
-    betterLootMarkersContainer:SetName(CName.new(name))
-    betterLootMarkersContainer:SetFitToContent(true)
-    betterLootMarkersContainer:SetAnchor(inkEAnchor.Fill)
-    betterLootMarkersContainer:SetAnchorPoint(Vector2.new({
+    container:SetName(CONTAINER_CNAME)
+    container:SetFitToContent(true)
+    container:SetAnchor(inkEAnchor.Fill)
+    container:SetAnchorPoint(Vector2.new({
         X = 0.5,
         Y = 0.5
     }))
-    betterLootMarkersContainer:SetChildMargin(inkMargin.new({
+    container:SetChildMargin(inkMargin.new({
         top = 0.0,
         right = 20.0,
         bottom = 20.0,
         left = 0.0
     }))
-    betterLootMarkersContainer:Reparent(parent)
-    return betterLootMarkersContainer
+    container:Reparent(parent)
+    return container
 end
 
 function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color, value)
@@ -184,12 +195,11 @@ function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
             quality = quality,
             isIconic = RPGManager.IsItemIconic(item),
         }
-        if not Utils.HasKey(categories, category) then
+        if categories[category] == nil then
             categories[category] = newItem
         else
-            local currentItem = categories[category]
+            local currentScore = BetterLootMarkers.GetItemScore(categories[category])
             local newScore = BetterLootMarkers.GetItemScore(newItem)
-            local currentScore = BetterLootMarkers.GetItemScore(currentItem)
             if newScore > currentScore then
                 categories[category] = newItem
             end
@@ -240,7 +250,7 @@ function BetterLootMarkers.GetItemListForObject(object)
         if not owner then
             return {}
         end
-        if owner:IsA(CName.new("gameItemDropObject")) then
+        if owner:IsA(ITEM_DROP_CNAME) then
             _, itemList = transactionSystem:GetItemList(owner)
             itemList = itemList or {}
         end
