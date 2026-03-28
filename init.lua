@@ -1,7 +1,7 @@
 local Utils = require("Modules/Utils.lua")
 
-local CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
-local ITEM_DROP_CNAME = CName.new("gameItemDropObject")
+local CONTAINER_CNAME
+local ITEM_DROP_CNAME
 
 BetterLootMarkers = {
     Settings = {},
@@ -29,6 +29,9 @@ function BetterLootMarkers:new()
     BetterLootMarkers.Settings.Init()
 
     registerForEvent("onInit", function()
+        CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
+        ITEM_DROP_CNAME = CName.new("gameItemDropObject")
+
         BetterLootMarkers.Version = BetterLootMarkers.LoadVersion()
         BetterLootMarkers.ItemTypes = require("Modules/Types.lua")
         print("[BetterLootMarkers] Loaded v" .. BetterLootMarkers.Version)
