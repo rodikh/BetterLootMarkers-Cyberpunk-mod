@@ -1,12 +1,18 @@
 local Utils = require("Modules/Utils.lua")
 
-local CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
-local ITEM_DROP_CNAME = CName.new("gameItemDropObject")
+local CONTAINER_CNAME
+local ITEM_DROP_CNAME
+
+local _scannerCacheTime = 0
+local _scannerCacheValue = false
 
 BetterLootMarkers = {
     Settings = {},
     ItemTypes = {},
-    Version = "dev"
+    Version = "dev",
+    _managedControllers = {},
+    _lastScannerState = nil,
+    _cleanupTimer = 0
 }
 
 function BetterLootMarkers.LoadVersion()
@@ -29,6 +35,9 @@ function BetterLootMarkers:new()
     BetterLootMarkers.Settings.Init()
 
     registerForEvent("onInit", function()
+        CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
+        ITEM_DROP_CNAME = CName.new("gameItemDropObject")
+
         BetterLootMarkers.Version = BetterLootMarkers.LoadVersion()
         BetterLootMarkers.ItemTypes = require("Modules/Types.lua")
         print("[BetterLootMarkers] Loaded v" .. BetterLootMarkers.Version)
@@ -41,6 +50,63 @@ function BetterLootMarkers:new()
             BetterLootMarkers.HandleLootMarkersForController(self)
         end)
     end)
+
+    registerForEvent("onUpdate", function(dt)
+        if not BetterLootMarkers.Settings.immersiveMode then
+            return
+        end
+
+        BetterLootMarkers._cleanupTimer = BetterLootMarkers._cleanupTimer + dt
+        if BetterLootMarkers._cleanupTimer > 10 then
+            BetterLootMarkers._cleanupTimer = 0
+            BetterLootMarkers._managedControllers = {}
+        end
+
+        local scannerNow = BetterLootMarkers.IsScannerActive()
+
+        if BetterLootMarkers._lastScannerState == nil then
+            BetterLootMarkers._lastScannerState = scannerNow
+            return
+        end
+
+        if scannerNow == BetterLootMarkers._lastScannerState then
+            return
+        end
+
+        BetterLootMarkers._lastScannerState = scannerNow
+        for ctrl, _ in pairs(BetterLootMarkers._managedControllers) do
+            pcall(BetterLootMarkers._HandleLootMarkers, ctrl)
+        end
+    end)
+end
+
+function BetterLootMarkers.IsScannerActive()
+    local now = os.clock()
+    if now - _scannerCacheTime < 0.05 then
+        return _scannerCacheValue
+    end
+    _scannerCacheTime = now
+
+    local ok, result = pcall(function()
+        local player = Game.GetPlayer()
+        if player == nil then return false end
+
+        local bb = Game.GetBlackboardSystem():GetLocalInstanced(
+            player:GetEntityID(),
+            GetAllBlackboardDefs().PlayerStateMachine
+        )
+        if bb == nil then return false end
+
+        local visionValue = bb:GetInt(GetAllBlackboardDefs().PlayerStateMachine.Vision)
+        return visionValue == 1
+    end)
+
+    if ok then
+        _scannerCacheValue = result
+    else
+        _scannerCacheValue = false
+    end
+    return _scannerCacheValue
 end
 
 function BetterLootMarkers.HandleLootMarkersForController(ctrl)
@@ -76,6 +142,15 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
         return
     end
 
+    BetterLootMarkers._managedControllers[ctrl] = true
+
+    -- Immersive mode: only show custom markers when scanner is active
+    if BetterLootMarkers.Settings.immersiveMode and not BetterLootMarkers.IsScannerActive() then
+        iconWidget:SetScale(Vector2.new({ X = 1, Y = 1 }))
+        containerPanel:RemoveChildByName(CONTAINER_CNAME)
+        return
+    end
+
     local target = Game.FindEntityByID(mappin:GetEntityID())
     if target == nil then
         return
@@ -100,11 +175,36 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
     containerPanel:RemoveChildByName(CONTAINER_CNAME)
 
     local container = BetterLootMarkers.AddPanelToWidget(containerPanel)
+    local iconicMode = BetterLootMarkers.Settings.iconicHighlight
+    local showCounts = BetterLootMarkers.Settings.showItemCounts
+
     for categoryKey, category in Utils.sortedCategoryPairs(categories, BetterLootMarkers.ItemTypes.Qualities) do
         local colorIndex = category.isIconic and "Iconic" or category.quality.value
         local color = HDRColor.new(BetterLootMarkers.ItemTypes.Colors[colorIndex])
-        BetterLootMarkers.AddIconToWidget(container, "BetterLootMappin-" .. categoryKey,
-            BetterLootMarkers.ItemTypes.ItemIcons[categoryKey], color, colorIndex)
+        local iconKey = BetterLootMarkers.ItemTypes.ItemIcons[categoryKey]
+        local needsCountSlot = showCounts and category.count > 1
+        local iconParent = container
+
+        if needsCountSlot then
+            local slot = inkVerticalPanel.new()
+            slot:SetName(CName.new("BetterLootSlot-" .. categoryKey))
+            slot:SetFitToContent(true)
+            slot:Reparent(container)
+            iconParent = slot
+        end
+
+        if category.isIconic and iconicMode ~= "none" then
+            BetterLootMarkers.AddIconicIconToWidget(iconParent, "BetterLootMappin-" .. categoryKey,
+                iconKey, color, iconicMode)
+        else
+            BetterLootMarkers.AddIconToWidget(iconParent, "BetterLootMappin-" .. categoryKey,
+                iconKey, color)
+        end
+
+        if needsCountSlot then
+            BetterLootMarkers.AddCountBadge(iconParent, "BetterLootCount-" .. categoryKey,
+                category.count, color)
+        end
     end
 end
 
@@ -147,20 +247,25 @@ function BetterLootMarkers.AddPanelToWidget(parent)
     return container
 end
 
-function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color, value)
+function BetterLootMarkers.ResolveIconRecord(iconId)
+    local resolvedId = iconId or BetterLootMarkers.ItemTypes.ItemIcons.Default
+    local record = TweakDBInterface.GetUIIconRecord(TDBID.Create(resolvedId))
+    if record == nil then
+        record = TweakDBInterface.GetUIIconRecord(TDBID.Create(BetterLootMarkers.ItemTypes.ItemIcons.Default))
+    end
+    return record
+end
+
+function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color)
+    local iconRecord = BetterLootMarkers.ResolveIconRecord(iconId)
+    if iconRecord == nil then
+        return
+    end
+
     local icon = inkImage.new()
     icon:SetName(CName.new(name))
-    local resolvedIconId = iconId or BetterLootMarkers.ItemTypes.ItemIcons.Default
-    local iconRecord = TweakDBInterface.GetUIIconRecord(TDBID.Create(resolvedIconId))
-    if iconRecord == nil then
-        iconRecord = TweakDBInterface.GetUIIconRecord(TDBID.Create(BetterLootMarkers.ItemTypes.ItemIcons.Default))
-        if iconRecord == nil then
-            return
-        end
-    end
     icon:SetTexturePart(iconRecord:AtlasPartName())
     icon:SetAtlasResource(iconRecord:AtlasResourcePath())
-
     icon:SetMargin(inkMargin.new({
         top = 0.0,
         right = 0.0,
@@ -175,6 +280,103 @@ function BetterLootMarkers.AddIconToWidget(parent, name, iconId, color, value)
     }))
     icon:SetTintColor(color)
     parent:AddChildWidget(icon)
+end
+
+function BetterLootMarkers.AddIconicIconToWidget(parent, name, iconId, color, mode)
+    local iconRecord = BetterLootMarkers.ResolveIconRecord(iconId)
+    if iconRecord == nil then
+        return
+    end
+
+    local scale = BetterLootMarkers.Settings.markerScaling
+
+    if mode == "border" then
+        local canvas = inkCanvas.new()
+        canvas:SetName(CName.new(name))
+        canvas:SetFitToContent(true)
+        canvas:SetMargin(inkMargin.new({
+            top = 0.0,
+            right = 15.0,
+            bottom = 0.0,
+            left = 0.0
+        }))
+
+        -- Glow layer: larger semi-transparent copy behind the main icon
+        local glow = inkImage.new()
+        glow:SetName(CName.new(name .. "-glow"))
+        glow:SetTexturePart(iconRecord:AtlasPartName())
+        glow:SetAtlasResource(iconRecord:AtlasResourcePath())
+        glow:SetVisible(true)
+        glow:SetFitToContent(true)
+        glow:SetScale(Vector2.new({ X = scale * 1.4, Y = scale * 1.4 }))
+        glow:SetTintColor(HDRColor.new(BetterLootMarkers.ItemTypes.Colors.Iconic))
+        glow:SetOpacity(0.45)
+        glow:SetAnchor(inkEAnchor.Centered)
+        glow:SetAnchorPoint(Vector2.new({ X = 0.5, Y = 0.5 }))
+        glow:Reparent(canvas)
+
+        -- Main icon on top
+        local icon = inkImage.new()
+        icon:SetName(CName.new(name .. "-icon"))
+        icon:SetTexturePart(iconRecord:AtlasPartName())
+        icon:SetAtlasResource(iconRecord:AtlasResourcePath())
+        icon:SetVisible(true)
+        icon:SetFitToContent(true)
+        icon:SetScale(Vector2.new({ X = scale, Y = scale }))
+        icon:SetTintColor(color)
+        icon:SetAnchor(inkEAnchor.Centered)
+        icon:SetAnchorPoint(Vector2.new({ X = 0.5, Y = 0.5 }))
+        icon:Reparent(canvas)
+
+        canvas:Reparent(parent)
+
+    elseif mode == "pulse" then
+        local icon = inkImage.new()
+        icon:SetName(CName.new(name))
+        icon:SetTexturePart(iconRecord:AtlasPartName())
+        icon:SetAtlasResource(iconRecord:AtlasResourcePath())
+        icon:SetMargin(inkMargin.new({ top = 0.0, right = 0.0, bottom = 0.0, left = 0.0 }))
+        icon:SetVisible(true)
+        icon:SetFitToContent(true)
+        icon:SetScale(Vector2.new({ X = scale, Y = scale }))
+        icon:SetTintColor(color)
+        parent:AddChildWidget(icon)
+
+        local animDef = inkAnimDef.new()
+        local scaleInterp = inkAnimScale.new()
+        scaleInterp:SetStartScale(Vector2.new({ X = scale, Y = scale }))
+        scaleInterp:SetEndScale(Vector2.new({ X = scale * 1.25, Y = scale * 1.25 }))
+        scaleInterp:SetDuration(0.4)
+        animDef:AddInterpolator(scaleInterp)
+
+        local options = inkAnimOptions.new()
+        options.loopType = inkanimLoopType.PingPong
+        options.loopCounter = 0
+        icon:PlayAnimationWithOptions(animDef, options)
+
+        if not icon:IsAnimationPlaying() then
+            -- Fallback: try constructor-style options
+            local opts2 = inkAnimOptions.new({ loopType = 2, loopCounter = 0 })
+            icon:PlayAnimationWithOptions(animDef, opts2)
+        end
+    end
+end
+
+function BetterLootMarkers.AddCountBadge(parent, name, count, color)
+    local text = inkText.new()
+    text:SetName(CName.new(name))
+    text:SetText(tostring(count))
+    text:SetFontFamily("base\\gameplay\\gui\\fonts\\raj\\raj.inkfontfamily")
+    text:SetFontSize(18)
+    text:SetTintColor(color)
+    text:SetVisible(true)
+    text:SetFitToContent(true)
+    text:SetHAlign(inkEHorizontalAlign.Center)
+    text:SetScale(Vector2.new({
+        X = BetterLootMarkers.Settings.markerScaling,
+        Y = BetterLootMarkers.Settings.markerScaling
+    }))
+    parent:AddChildWidget(text)
 end
 
 function BetterLootMarkers.GetItemScore(itemData)
@@ -197,11 +399,15 @@ function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
         }
         if categories[category] == nil then
             categories[category] = newItem
+            categories[category].count = 1
         else
+            categories[category].count = categories[category].count + 1
             local currentScore = BetterLootMarkers.GetItemScore(categories[category])
             local newScore = BetterLootMarkers.GetItemScore(newItem)
             if newScore > currentScore then
+                local count = categories[category].count
                 categories[category] = newItem
+                categories[category].count = count
             end
         end
     end
