@@ -5,7 +5,7 @@ local ITEM_DROP_CNAME
 BetterLootMarkers = {
     Settings = {},
     ItemTypes = {},
-    Version = "dev",
+    Version = "1.4.0",
 }
 
 require("Modules/LootMarkerUI.lua")
