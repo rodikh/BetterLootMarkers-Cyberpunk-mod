@@ -2,16 +2,12 @@ local Settings = {
     showDefaultMappin = false,
     verticalMode = false,
     markerScaling = 1.0,
-    iconicHighlight = "none",
     showItemCounts = false,
     immersiveMode = false,
     isOverlayOpen = false,
     config_file = "config.json",
     _dirty = false
 }
-
-local ICONIC_OPTIONS = { "none", "border", "pulse" }
-local ICONIC_LABELS = { "None", "Border (Glow)", "Pulse (Animation)" }
 
 function Settings.Init()
     Settings.Load()
@@ -57,19 +53,6 @@ function Settings.Init()
             Settings._dirty = true
         end
 
-        local iconicIndex = 0
-        for i, opt in ipairs(ICONIC_OPTIONS) do
-            if opt == Settings.iconicHighlight then
-                iconicIndex = i - 1
-            end
-        end
-        local newIconicIndex
-        newIconicIndex, toggled = ImGui.Combo("Iconic Highlight", iconicIndex, ICONIC_LABELS, #ICONIC_LABELS)
-        if toggled then
-            Settings.iconicHighlight = ICONIC_OPTIONS[newIconicIndex + 1]
-            Settings._dirty = true
-        end
-
         local showItemCounts
         showItemCounts, toggled = ImGui.Checkbox("Show Item Counts", Settings.showItemCounts)
         if toggled then
@@ -99,7 +82,6 @@ function Settings.Save()
         verticalMode = Settings.verticalMode,
         showDefaultMappin = Settings.showDefaultMappin,
         markerScaling = Settings.markerScaling,
-        iconicHighlight = Settings.iconicHighlight,
         showItemCounts = Settings.showItemCounts,
         immersiveMode = Settings.immersiveMode
     }
@@ -133,12 +115,6 @@ function Settings.Load()
     end
     if type(decoded["markerScaling"]) == "number" then
         Settings.markerScaling = math.max(0.0, math.min(1.0, decoded["markerScaling"]))
-    end
-    if type(decoded["iconicHighlight"]) == "string" then
-        local valid = { none = true, border = true, pulse = true }
-        if valid[decoded["iconicHighlight"]] then
-            Settings.iconicHighlight = decoded["iconicHighlight"]
-        end
     end
     if type(decoded["showItemCounts"]) == "boolean" then
         Settings.showItemCounts = decoded["showItemCounts"]

@@ -2,16 +2,10 @@ local Utils = require("Modules/Utils.lua")
 
 local ITEM_DROP_CNAME
 
-local _scannerCacheTime = 0
-local _scannerCacheValue = false
-
 BetterLootMarkers = {
     Settings = {},
     ItemTypes = {},
     Version = "dev",
-    _managedControllers = {},
-    _lastScannerState = nil,
-    _cleanupTimer = 0
 }
 
 require("Modules/LootMarkerUI.lua")
@@ -34,6 +28,8 @@ end
 function BetterLootMarkers:new()
     BetterLootMarkers.Settings = require("Modules/Settings.lua")
     BetterLootMarkers.Settings.Init()
+    BetterLootMarkers.ScannerFix = require("Modules/ScannerFix.lua")
+    BetterLootMarkers.ImmersiveMode = require("Modules/ImmersiveMode.lua")
 
     registerForEvent("onInit", function()
         BetterLootMarkers.CONTAINER_CNAME = CName.new("BetterLootMarkersContainer")
@@ -50,64 +46,14 @@ function BetterLootMarkers:new()
         ObserveAfter("GameplayMappinController", "UpdateIcon", function(self)
             BetterLootMarkers.HandleLootMarkersForController(self)
         end)
+
+        BetterLootMarkers.ScannerFix.Init(ITEM_DROP_CNAME)
+        BetterLootMarkers.ImmersiveMode.Init()
     end)
 
     registerForEvent("onUpdate", function(dt)
-        if not BetterLootMarkers.Settings.immersiveMode then
-            return
-        end
-
-        BetterLootMarkers._cleanupTimer = BetterLootMarkers._cleanupTimer + dt
-        if BetterLootMarkers._cleanupTimer > 10 then
-            BetterLootMarkers._cleanupTimer = 0
-            BetterLootMarkers._managedControllers = {}
-        end
-
-        local scannerNow = BetterLootMarkers.IsScannerActive()
-
-        if BetterLootMarkers._lastScannerState == nil then
-            BetterLootMarkers._lastScannerState = scannerNow
-            return
-        end
-
-        if scannerNow == BetterLootMarkers._lastScannerState then
-            return
-        end
-
-        BetterLootMarkers._lastScannerState = scannerNow
-        for ctrl, _ in pairs(BetterLootMarkers._managedControllers) do
-            pcall(BetterLootMarkers._HandleLootMarkers, ctrl)
-        end
+        BetterLootMarkers.ImmersiveMode.Tick(dt)
     end)
-end
-
-function BetterLootMarkers.IsScannerActive()
-    local now = os.clock()
-    if now - _scannerCacheTime < 0.05 then
-        return _scannerCacheValue
-    end
-    _scannerCacheTime = now
-
-    local ok, result = pcall(function()
-        local player = Game.GetPlayer()
-        if player == nil then return false end
-
-        local bb = Game.GetBlackboardSystem():GetLocalInstanced(
-            player:GetEntityID(),
-            GetAllBlackboardDefs().PlayerStateMachine
-        )
-        if bb == nil then return false end
-
-        local visionValue = bb:GetInt(GetAllBlackboardDefs().PlayerStateMachine.Vision)
-        return visionValue == 1
-    end)
-
-    if ok then
-        _scannerCacheValue = result
-    else
-        _scannerCacheValue = false
-    end
-    return _scannerCacheValue
 end
 
 function BetterLootMarkers.HandleLootMarkersForController(ctrl)
@@ -143,10 +89,9 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
         return
     end
 
-    BetterLootMarkers._managedControllers[ctrl] = true
+    BetterLootMarkers.ImmersiveMode.TrackController(ctrl)
 
-    -- Immersive mode: only show custom markers when scanner is active
-    if BetterLootMarkers.Settings.immersiveMode and not BetterLootMarkers.IsScannerActive() then
+    if BetterLootMarkers.Settings.immersiveMode and not BetterLootMarkers.ImmersiveMode.IsScannerActive() then
         iconWidget:SetScale(Vector2.new({ X = 1, Y = 1 }))
         containerPanel:RemoveChildByName(BetterLootMarkers.CONTAINER_CNAME)
         return
@@ -176,7 +121,6 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
     containerPanel:RemoveChildByName(BetterLootMarkers.CONTAINER_CNAME)
 
     local container = BetterLootMarkers.AddPanelToWidget(containerPanel)
-    local iconicMode = BetterLootMarkers.Settings.iconicHighlight
     local showCounts = BetterLootMarkers.Settings.showItemCounts
 
     for categoryKey, category in Utils.sortedCategoryPairs(categories, BetterLootMarkers.ItemTypes.Qualities) do
@@ -197,13 +141,8 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
             iconParent = slot
         end
 
-        if category.isIconic and iconicMode ~= "none" then
-            BetterLootMarkers.AddIconicIconToWidget(iconParent, "BetterLootMappin-" .. categoryKey,
-                iconKey, color, iconicMode)
-        else
-            BetterLootMarkers.AddIconToWidget(iconParent, "BetterLootMappin-" .. categoryKey,
-                iconKey, color)
-        end
+        BetterLootMarkers.AddIconToWidget(iconParent, "BetterLootMappin-" .. categoryKey,
+            iconKey, color)
 
         if needsCountSlot then
             BetterLootMarkers.AddCountBadge(iconParent, "BetterLootCount-" .. categoryKey,
