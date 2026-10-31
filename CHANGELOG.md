@@ -20,5 +20,7 @@ silent.
   closes.
 - `init.lua` now returns the mod table so it can be inspected via
   `GetMod("BetterLootMarkers")` in the CET console.
-- Packaging script (`pack-for-nexus.bat`) now prefers `7z`, then `tar.exe`,
-  falling back to PowerShell `Compress-Archive` only if neither is available.
+- Release zip is now built by `pack-zip.ps1`: forward-slash paths, no `./`
+  prefix, plain 0644 file modes, so it extracts correctly on Linux. (The old
+  Compress-Archive zips used backslash paths, which Linux extractors treat as
+  part of the file name.)

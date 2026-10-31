@@ -33,7 +33,7 @@ If no version is provided, it defaults to `dev`:
 
 The default version comes from `version.txt` (also used by the mod at runtime and printed in CET log on startup).
 
-Packaging uses `7z` when available (preferred for maximum cross-platform compatibility), otherwise Windows `tar.exe`, with PowerShell `Compress-Archive` as a last-resort fallback.
+Packaging uses `pack-zip.ps1` (built in PowerShell/.NET, no extra tools needed). It writes forward-slash paths with no `./` prefix, so the zip extracts correctly on Linux as well as Windows.
 
 ## Issues and Contributions
 
