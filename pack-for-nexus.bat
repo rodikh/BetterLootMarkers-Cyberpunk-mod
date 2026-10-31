@@ -27,11 +27,31 @@ if exist "%ROOT_DIR%README.md" copy /y "%ROOT_DIR%README.md" "%MOD_STAGE_DIR%\" 
 if exist "%VERSION_FILE%" copy /y "%VERSION_FILE%" "%MOD_STAGE_DIR%\" >nul
 
 echo [3/5] Creating zip...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Compress-Archive -Path '%BUILD_DIR%\*' -DestinationPath '%ZIP_PATH%' -Force"
-if errorlevel 1 (
-  echo Failed to create zip archive.
-  exit /b 1
+if exist "%ZIP_PATH%" del /q "%ZIP_PATH%"
+
+where 7z >nul 2>nul
+if not errorlevel 1 (
+  rem 7-Zip produces broadly compatible archives across Windows/Linux tools.
+  pushd "%BUILD_DIR%"
+  7z a -tzip -mx=9 "%ZIP_PATH%" * >nul
+  set "ZIP_ERROR=%ERRORLEVEL%"
+  popd
+  if not "%ZIP_ERROR%"=="0" (
+    echo Failed to create zip archive with 7-Zip.
+    exit /b 1
+  )
+) else (
+  rem Fallback to BSD tar (Windows tar.exe) for a standard zip layout.
+  tar -a -c -f "%ZIP_PATH%" -C "%BUILD_DIR%" .
+  if errorlevel 1 (
+    echo tar.exe zip creation failed, trying PowerShell Compress-Archive...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+      "Compress-Archive -Path '%BUILD_DIR%\*' -DestinationPath '%ZIP_PATH%' -Force"
+    if errorlevel 1 (
+      echo Failed to create zip archive.
+      exit /b 1
+    )
+  )
 )
 
 echo [4/5] Cleaning temp files...

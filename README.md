@@ -15,7 +15,7 @@ Extract the entire repository into `Cyberpunk 2077\bin\x64\plugins\cyber_engine_
 [Optional] Set "Show Default Markers" to true in the Cyber Engine Tweaks overlay to change bring back the original markers alongside Better Loot Markers
 [Optional] Use "Marker Scaling" to change the size of the markers
 
-Tested to work on Cyberpunk version 2.2
+Tested to work on Cyberpunk version 2.31
 
 ## Packaging for Nexus Mods
 
@@ -32,6 +32,8 @@ If no version is provided, it defaults to `dev`:
 `pack-for-nexus.bat`
 
 The default version comes from `version.txt` (also used by the mod at runtime and printed in CET log on startup).
+
+Packaging uses `7z` when available (preferred for maximum cross-platform compatibility), otherwise Windows `tar.exe`, with PowerShell `Compress-Archive` as a last-resort fallback.
 
 ## Issues and Contributions
 
