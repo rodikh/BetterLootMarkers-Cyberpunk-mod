@@ -1,8 +1,11 @@
 name: Publish to Nexus
 
-# Manual only. Uploads the zip from an existing GitHub Release to Nexus Mods
-# using the v3 API (https://api-docs.nexusmods.com/). Needs the NEXUS_API_KEY secret.
+# Manual only. Uploads the zip from an existing GitHub Release to Nexus Mods with
+# the official Nexus-Mods/upload-action. Needs the NEXUS_API_KEY repository secret.
 # Run the "Release" workflow first so the GitHub Release (and its zip) exists.
+#
+# Find the ids on Nexus: tick "Advanced" on the mod's Files tab, or open the
+# Manage Files page.
 
 on:
   workflow_dispatch:
@@ -10,9 +13,12 @@ on:
       tag:
         description: 'Release tag to publish (e.g. 1.4.1)'
         required: true
-      mod_file_id:
-        description: 'Nexus mod file id to add the version to (leave empty to just list the mod files)'
-        required: false
+      file_id:
+        description: 'Nexus file id to add the new version to'
+        required: true
+      mod_id:
+        description: 'Nexus mod id (needed to add the changelog)'
+        required: true
       publish:
         description: 'Actually upload to Nexus (leave unchecked for a dry run)'
         type: boolean
@@ -26,70 +32,55 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: ${{ inputs.tag }}
-      FILE_ID: ${{ inputs.mod_file_id }}
-      PUBLISH: ${{ inputs.publish }}
-      NEXUS_API_KEY: ${{ secrets.NEXUS_API_KEY }}
       GH_TOKEN: ${{ github.token }}
-      API: https://api.nexusmods.com/v3
-      GAME: cyberpunk2077
-      GAME_SCOPED_MOD_ID: '3486'
     steps:
-      - name: Check secret is set
-        run: |
-          if [ -z "$NEXUS_API_KEY" ]; then echo "NEXUS_API_KEY secret is not set." >&2; exit 1; fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
 
       - name: Download release zip
         run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.zip' --dir .
 
-      - name: Look up mod and files
+      - name: Extract changelog for this version
+        id: notes
+        shell: pwsh
         run: |
-          set -euo pipefail
-          api() { # api METHOD PATH [json-body]
-            local out code
-            out=$(mktemp)
-            if [ -n "${3:-}" ]; then
-              code=$(curl -sS -o "$out" -w '%{http_code}' -X "$1" -H "apikey: $NEXUS_API_KEY" -H 'Content-Type: application/json' -d "$3" "$API$2")
-            else
-              code=$(curl -sS -o "$out" -w '%{http_code}' -X "$1" -H "apikey: $NEXUS_API_KEY" "$API$2")
-            fi
-            if [ "$code" -ge 400 ]; then echo "HTTP $code from $1 $2" >&2; cat "$out" >&2; echo >&2; exit 1; fi
-            cat "$out"
+          $lines = Get-Content CHANGELOG.md
+          $start = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "^##\s+$([regex]::Escape($env:TAG))\s*$") { $start = $i + 1; break }
           }
-          MOD_ID=$(api GET "/games/$GAME/mods/$GAME_SCOPED_MOD_ID" | jq -r '.data.id')
-          echo "Mod: $MOD_ID (current page version: $(api GET "/mods/$MOD_ID" | jq -r '.data.version // "?"'))"
-          echo "Mod files:"
-          api GET "/mods/$MOD_ID/files" | jq -r '.data.mod_files[] | "  id=\(.id)  name=\(.name)"'
-          echo "MOD_ID=$MOD_ID" >> "$GITHUB_ENV"
-          if [ -z "$FILE_ID" ]; then
-            echo "No mod_file_id given. Re-run with the id of the file to update." ; exit 0
-          fi
-          if [ "$PUBLISH" != "true" ]; then
-            echo "Dry run: would upload $(ls *.zip) as version $TAG to mod file $FILE_ID. Tick 'publish' to do it."; exit 0
-          fi
+          if ($start -lt 0) { Write-Error "No '## $($env:TAG)' section in CHANGELOG.md."; exit 1 }
+          $notes = @()
+          for ($i = $start; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^##\s') { break }
+            $notes += $lines[$i]
+          }
+          $text = ($notes -join "`n").Trim()
+          "changelog<<EOF`n$text`nEOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host $text
 
-          ZIP=$(ls *.zip | head -n 1)
-          SIZE=$(stat -c %s "$ZIP")
-          MD5_HEX=$(md5sum "$ZIP" | cut -d' ' -f1)
-          MD5_B64=$(openssl dgst -md5 -binary "$ZIP" | base64)
+      - name: Find zip name
+        id: zip
+        run: echo "name=$(ls BetterLootMarkers-*.zip | head -n 1)" >> "$GITHUB_OUTPUT"
 
-          UPLOAD=$(api POST /uploads "$(jq -nc --arg f "$ZIP" --argjson s "$SIZE" --arg m "$MD5_HEX" '{filename:$f,size_bytes:$s,md5:$m}')")
-          UPLOAD_ID=$(echo "$UPLOAD" | jq -r '.data.id')
-          URL=$(echo "$UPLOAD" | jq -r '.data.presigned_url')
+      - name: Dry run summary
+        if: ${{ !inputs.publish }}
+        run: |
+          echo "Dry run. Would upload ${{ steps.zip.outputs.name }} as version $TAG"
+          echo "to file ${{ inputs.file_id }} of mod ${{ inputs.mod_id }}. Tick 'publish' to do it."
 
-          curl -sS --fail-with-body -X PUT --upload-file "$ZIP" \
-            -H "Content-Disposition: attachment; filename=\"$ZIP\"" \
-            -H "Content-MD5: $MD5_B64" "$URL"
-
-          api POST "/uploads/$UPLOAD_ID/finalise" > /dev/null
-          for i in $(seq 1 30); do
-            STATE=$(api GET "/uploads/$UPLOAD_ID" | jq -r '.data.state')
-            echo "upload state: $STATE"
-            [ "$STATE" = "available" ] && break
-            sleep 4
-          done
-          [ "$STATE" = "available" ] || { echo "Upload never became available." >&2; exit 1; }
-
-          BODY=$(jq -nc --arg u "$UPLOAD_ID" --arg n "BetterLootMarkers $TAG" --arg v "$TAG" \
-            '{upload_id:$u,name:$n,version:$v,file_category:"main",update_mod_version:true}')
-          api POST "/mod-files/$FILE_ID/versions" "$BODY" | jq .
-          echo "Published $TAG to Nexus."
+      # Pinned to the commit of v1.0.0-beta.11 (a beta release) for supply-chain safety.
+      - name: Upload to Nexus Mods
+        if: ${{ inputs.publish }}
+        uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_id: ${{ inputs.file_id }}
+          filename: ${{ steps.zip.outputs.name }}
+          version: ${{ inputs.tag }}
+          display_name: BetterLootMarkers ${{ inputs.tag }}
+          category: main
+          update_mod_version: true
+          mod_id: ${{ inputs.mod_id }}
+          changelog: ${{ steps.notes.outputs.changelog }}
