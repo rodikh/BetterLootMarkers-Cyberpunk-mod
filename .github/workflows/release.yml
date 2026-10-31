@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (e.g. 1.4.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Check tag matches version.txt
+        shell: pwsh
+        run: |
+          $version = (Get-Content version.txt -TotalCount 1).Trim()
+          if ($version -ne $env:TAG) {
+            Write-Error "Tag '$($env:TAG)' does not match version.txt '$version'. Bump version.txt before tagging."
+            exit 1
+          }
+
+      - name: Build zip
+        shell: cmd
+        run: pack-for-nexus.bat %TAG%
+
+      - name: Extract release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          $lines = Get-Content CHANGELOG.md
+          $start = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "^##\s+$([regex]::Escape($env:TAG))\s*$") { $start = $i + 1; break }
+          }
+          if ($start -lt 0) {
+            Write-Error "No '## $($env:TAG)' section found in CHANGELOG.md."
+            exit 1
+          }
+          $notes = @()
+          for ($i = $start; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^##\s') { break }
+            $notes += $lines[$i]
+          }
+          ($notes -join "`n").Trim() | Set-Content dist/release-notes.md -Encoding utf8
+
+      - name: Create GitHub release
+        shell: pwsh
+        run: |
+          $zip = "dist/BetterLootMarkers-$($env:TAG).zip"
+          if (-not (Test-Path $zip)) { Write-Error "Missing $zip"; exit 1 }
+          gh release create $env:TAG $zip --title $env:TAG --notes-file dist/release-notes.md --verify-tag
