@@ -5,7 +5,7 @@ local ITEM_DROP_CNAME
 BetterLootMarkers = {
     Settings = {},
     ItemTypes = {},
-    Version = "1.4.0",
+    Version = "1.4.1",
 }
 
 require("Modules/LootMarkerUI.lua")
@@ -25,6 +25,25 @@ function BetterLootMarkers.LoadVersion()
     return version
 end
 
+function BetterLootMarkers.LogDiagnostics()
+    local cetVersion = "unknown"
+    local okCet, verResult = pcall(GetVersion)
+    if okCet and verResult ~= nil then
+        cetVersion = tostring(verResult)
+    end
+
+    local gameVersion = "unknown"
+    local okHandler, handler = pcall(Game.GetSystemRequestsHandler)
+    if okHandler and handler ~= nil then
+        local okVer, ver = pcall(handler.GetGameVersion, handler)
+        if okVer and ver ~= nil then
+            gameVersion = tostring(ver)
+        end
+    end
+
+    print(("[BetterLootMarkers] CET %s / Game %s"):format(cetVersion, gameVersion))
+end
+
 function BetterLootMarkers:new()
     BetterLootMarkers.Settings = require("Modules/Settings.lua")
     BetterLootMarkers.Settings.Init()
@@ -38,6 +57,7 @@ function BetterLootMarkers:new()
         BetterLootMarkers.Version = BetterLootMarkers.LoadVersion()
         BetterLootMarkers.ItemTypes = require("Modules/Types.lua")
         print("[BetterLootMarkers] Loaded v" .. BetterLootMarkers.Version)
+        BetterLootMarkers.LogDiagnostics()
 
         ObserveAfter("GameplayMappinController", "UpdateVisibility", function(self)
             BetterLootMarkers.HandleLootMarkersForController(self)
@@ -54,12 +74,16 @@ function BetterLootMarkers:new()
     registerForEvent("onUpdate", function(dt)
         BetterLootMarkers.ImmersiveMode.Tick(dt)
     end)
+
+    registerForEvent("onShutdown", function()
+        BetterLootMarkers.Settings.Save()
+    end)
 end
 
 function BetterLootMarkers.HandleLootMarkersForController(ctrl)
     local ok, err = pcall(BetterLootMarkers._HandleLootMarkers, ctrl)
     if not ok then
-        print("[BetterLootMarkers] Error: " .. tostring(err))
+        Utils.LogError("Error: " .. tostring(err))
     end
 end
 
@@ -68,12 +92,16 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
         return
     end
 
-    local mappin = ctrl:GetMappin()
+    local mappin = Utils.TryValue("GameplayMappinController:GetMappin", function()
+        return ctrl:GetMappin()
+    end)
     if mappin == nil then
         return
     end
 
-    local variant = mappin:GetVariant()
+    local variant = Utils.TryValue("IMappin:GetVariant", function()
+        return mappin:GetVariant()
+    end)
     if variant == nil or variant ~= gamedataMappinVariant.LootVariant then
         return
     end
@@ -97,7 +125,16 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
         return
     end
 
-    local target = Game.FindEntityByID(mappin:GetEntityID())
+    local entityId = Utils.TryValue("IMappin:GetEntityID", function()
+        return mappin:GetEntityID()
+    end)
+    if entityId == nil then
+        return
+    end
+
+    local target = Utils.TryValue("Game.FindEntityByID", function()
+        return Game.FindEntityByID(entityId)
+    end)
     if target == nil then
         return
     end
@@ -152,7 +189,10 @@ function BetterLootMarkers._HandleLootMarkers(ctrl)
 end
 
 function BetterLootMarkers.HandleShowHideOriginalIcon(ctrl, icon)
-    if not BetterLootMarkers.Settings.showDefaultMappin and not ctrl:IsQuest() then
+    local isQuest = Utils.TryValue("GameplayMappinController:IsQuest", function()
+        return ctrl:IsQuest()
+    end)
+    if not BetterLootMarkers.Settings.showDefaultMappin and not isQuest then
         icon:SetScale(Vector2.new({
             X = 0,
             Y = 0
@@ -177,11 +217,16 @@ end
 function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
     local categories = {}
     for _, item in ipairs(itemList) do
-        local quality = RPGManager.GetItemDataQuality(item)
+        local quality = Utils.TryValue("RPGManager.GetItemDataQuality", function()
+            return RPGManager.GetItemDataQuality(item)
+        end)
         local category = BetterLootMarkers.GetLootCategoryForItem(item)
+        local isIconic = Utils.TryValue("RPGManager.IsItemIconic", function()
+            return RPGManager.IsItemIconic(item)
+        end)
         local newItem = {
             quality = quality,
-            isIconic = RPGManager.IsItemIconic(item),
+            isIconic = isIconic or false,
         }
         if categories[category] == nil then
             categories[category] = newItem
@@ -202,19 +247,34 @@ function BetterLootMarkers.ResolveHighestQualityByCategory(itemList)
 end
 
 function BetterLootMarkers.GetLootCategoryForItem(item)
-    if item:GetNameAsString() == "money" then
+    local name = Utils.TryValue("ItemID:GetNameAsString", function()
+        return item:GetNameAsString()
+    end)
+    if name == "money" then
         return "Money"
     end
 
-    if RPGManager.IsItemBroken(item) then
+    local isBroken = Utils.TryValue("RPGManager.IsItemBroken", function()
+        return RPGManager.IsItemBroken(item)
+    end)
+    if isBroken then
         return "Broken"
     end
 
-    if item:HasTag("Recipe") then
+    local hasRecipeTag = Utils.TryValue("ItemID:HasTag", function()
+        return item:HasTag("Recipe")
+    end)
+    if hasRecipeTag then
         return "CraftingSpec"
     end
 
-    local itemType = item:GetItemType()
+    local itemType = Utils.TryValue("ItemID:GetItemType", function()
+        return item:GetItemType()
+    end)
+    if itemType == nil then
+        return "Default"
+    end
+
     local mappedCategory = BetterLootMarkers.ItemTypes.TypeToCategoryByString[tostring(itemType)]
     if mappedCategory ~= nil then
         return mappedCategory
@@ -230,25 +290,36 @@ function BetterLootMarkers.GetLootCategoryForItem(item)
 end
 
 function BetterLootMarkers.GetItemListForObject(object)
-    local transactionSystem = Game.GetTransactionSystem()
+    local transactionSystem = Utils.TryValue("Game.GetTransactionSystem", function()
+        return Game.GetTransactionSystem()
+    end)
     if transactionSystem == nil then
         return {}
     end
 
-    local _, itemList = transactionSystem:GetItemList(object)
+    local _, _, itemList = Utils.Try("TransactionSystem:GetItemList", function()
+        return transactionSystem:GetItemList(object)
+    end)
     itemList = itemList or {}
     if #itemList == 0 then
-        local owner = object:GetOwner()
+        local owner = Utils.TryValue("Entity:GetOwner", function()
+            return object:GetOwner()
+        end)
         if not owner then
             return {}
         end
         if owner:IsA(ITEM_DROP_CNAME) then
-            _, itemList = transactionSystem:GetItemList(owner)
-            itemList = itemList or {}
+            local _, _, ownerItemList = Utils.Try("TransactionSystem:GetItemList(owner)", function()
+                return transactionSystem:GetItemList(owner)
+            end)
+            itemList = ownerItemList or {}
         end
     end
 
     return itemList
 end
 
-return BetterLootMarkers:new()
+BetterLootMarkers:new()
+
+-- Exposes the mod table via GetMod("BetterLootMarkers") for console debugging.
+return BetterLootMarkers

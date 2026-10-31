@@ -1,6 +1,8 @@
 -- Immersive mode: only show custom loot markers while the scanner is active.
 -- Owns scanner state detection, controller tracking, and refresh/prune logic.
 
+local Utils = require("Modules/Utils.lua")
+
 local ImmersiveMode = {}
 
 local _cacheTime = 0
@@ -20,7 +22,7 @@ function ImmersiveMode.IsScannerActive()
     end
     _cacheTime = now
 
-    local ok, result = pcall(function()
+    local ok, result = Utils.Try("ImmersiveMode.IsScannerActive", function()
         local player = Game.GetPlayer()
         if player == nil then return false end
 

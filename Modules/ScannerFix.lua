@@ -22,6 +22,8 @@
 -- m_canHideMappinsByTask, so the delayed show task cancels the pending
 -- hide task that OnHUDInstruction already queued.
 
+local Utils = require("Modules/Utils.lua")
+
 local ScannerFix = {}
 
 local SCANNER_EXIT_GRACE = 0.5
@@ -49,10 +51,14 @@ function ScannerFix.Init(itemDropCName)
     ObserveAfter("GameplayRoleComponent", "OnHUDInstruction", function(self, evt)
         if (os.clock() - scannerExitTime) > SCANNER_EXIT_GRACE then return end
 
-        local owner = self:GetOwner()
+        local owner = Utils.TryValue("GameplayRoleComponent:GetOwner", function()
+            return self:GetOwner()
+        end)
         if not IsLootSource(owner, itemDropCName) then return end
 
-        pcall(self.ShowRoleMappinsByTask, self)
+        Utils.Try("GameplayRoleComponent:ShowRoleMappinsByTask", function()
+            return self:ShowRoleMappinsByTask()
+        end)
     end)
 end
 

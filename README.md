@@ -15,7 +15,7 @@ Extract the entire repository into `Cyberpunk 2077\bin\x64\plugins\cyber_engine_
 [Optional] Set "Show Default Markers" to true in the Cyber Engine Tweaks overlay to change bring back the original markers alongside Better Loot Markers
 [Optional] Use "Marker Scaling" to change the size of the markers
 
-Tested to work on Cyberpunk version 2.31
+Tested to work on Cyberpunk version 2.5
 
 ## Packaging for Nexus Mods
 
